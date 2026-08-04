@@ -538,6 +538,11 @@ criteria = "safe-to-deploy"
 version = "0.61.2"
 criteria = "safe-to-deploy"
 
+[[exemptions.wit-bindgen]]
+version = "0.57.1"
+criteria = "safe-to-deploy"
+notes = "WASI-only orphan in Cargo.lock: nothing in any build target depends on it (cargo tree finds no path). Exempted rather than certified because cargo-vet 0.10.2 writes a trusted-publisher entry for it — crates.io OIDC publishing, so no user-id — and then cannot parse its own imports.lock under --locked. Revisit when cargo-vet can round-trip a trusted publisher."
+
 [[exemptions.xterm-color]]
 version = "1.0.2"
 criteria = "safe-to-deploy"

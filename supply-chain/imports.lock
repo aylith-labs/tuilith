@@ -162,11 +162,6 @@ user-id = 1
 user-login = "alexcrichton"
 user-name = "Alex Crichton"
 
-[[publisher.wit-bindgen]]
-version = "0.57.1"
-when = "2026-04-17"
-trusted-publisher = "github:bytecodealliance/wit-bindgen"
-
 [[publisher.zmij]]
 version = "1.0.23"
 when = "2026-07-13"
