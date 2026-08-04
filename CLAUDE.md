@@ -54,3 +54,7 @@ any provenance change.
   crate with multiple publishers.
 - Verify a widget by looking at it in both theme variants — a colour bug in one is invisible in the
   other, which is why the palette guarantees no role shares a value between them.
+- **Registers in none of the handbook's cross-repo registries.** A component library — and the planned
+  CLI with its TUI storybook — runs locally, so there is no health endpoint for `aylith-infra` and no
+  linkable entity for `entity-graph`, and the hub has nothing to group. The one that changes: adding a
+  crates.io publish workflow makes it a `deploy-alert-targets.json` target.
