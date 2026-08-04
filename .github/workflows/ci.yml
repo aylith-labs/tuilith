@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # The weekly upgrade and any publish run on triggers this workflow never sees, so they call this
+  # gate as their own `verify` job rather than restating its steps and drifting from it.
+  workflow_call:
+
+jobs:
+  check:
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    steps:
+      - uses: actions/checkout@v7
+
+      # No toolchain action: rustup is preinstalled on the runner and honours rust-toolchain.toml, so
+      # the pinned channel and its components install on the first cargo call. One less third-party
+      # action in the supply chain of a repo whose point is auditing its supply chain.
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ hashFiles('Cargo.toml') }}
+
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo test --workspace
+      - run: cargo build --workspace --release
+
+      # The published record has to match what the components declare. Rendered from the registry and
+      # diff-checked here, so it cannot claim a lineage the code no longer has.
+      - name: PROVENANCE.md is current
+        run: |
+          cargo test --workspace render_the_provenance_record
+          git --no-pager diff --exit-code --no-color PROVENANCE.md
+
+  # Separate job: the dependency set is a different question from whether the code compiles, and a
+  # supply-chain failure should be readable as one rather than buried in a build log.
+  supply-chain:
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-vet,cargo-deny
+
+      # Every dependency delta we take has to have been reviewed by someone we trust — us, or one of
+      # the audit sets we import. An uncertified delta fails here, which is the whole point.
+      - run: cargo vet --locked
+
+      # Licences against the allowlist, RUSTSEC advisories, banned crates, and sources other than
+      # crates.io. The licence check is what keeps a viral dependency out mechanically.
+      - run: cargo deny --all-features check

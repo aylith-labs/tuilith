@@ -1,0 +1,43 @@
+[workspace]
+members = ["."]
+resolver = "3"
+
+[package]
+name = "tuilith"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.97"
+description = "Audited terminal-UI components for ratatui, each carrying where it came from"
+repository = "https://github.com/aylith-labs/tuilith"
+license = "MIT OR Apache-2.0"
+keywords = ["ratatui", "tui", "terminal", "widgets", "supply-chain"]
+categories = ["command-line-interface"]
+# The provenance record is part of the package: a component's lineage is no use to a consumer who
+# cannot read it from the crate they installed.
+include = ["src/**", "README.md", "PROVENANCE.md", "LICENSE-*", "CHANGELOG.md"]
+
+[lints.rust]
+missing_docs = "warn"
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = { level = "deny", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+# A widget's draw call legitimately takes the frame, the area, the state and the palette.
+too_many_arguments = "allow"
+# Terminal geometry is `u16` throughout ratatui, and casting to `usize` to index is the ordinary
+# operation rather than a smell.
+cast_possible_truncation = "allow"
+cast_lossless = "allow"
+
+[dependencies]
+ratatui = "0.30.2"
+crossterm = "0.29.0"
+# The distributed registry behind the provenance catalog: a component declares its own lineage next to
+# itself, and nothing keeps a second list that could disagree.
+inventory = "0.3.24"
+serde_json = { version = "1.0.151", features = ["preserve_order"] }
+terminal-colorsaurus = "1.0.3"
+
+[dev-dependencies]
+insta = "1.48.0"

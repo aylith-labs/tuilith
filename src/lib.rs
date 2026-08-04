@@ -1,0 +1,24 @@
+//! Terminal-UI components for [ratatui], curated and audited, each carrying where it came from.
+//!
+//! Two things distinguish this from a bag of widgets:
+//!
+//! **Every component declares its provenance.** A [`Wrapper`] is upstream's code re-exported, so its
+//! API moves when upstream's does. A [`Tracked`] fork is upstream's code vendored at a revision with
+//! our additions logged, so upstream's later fixes can still be taken. [`Inspired`] is our own
+//! implementation of an idea seen elsewhere, sharing no code with it. [`Original`] was first written
+//! here. The record is derived from the components themselves and published as `PROVENANCE.md`.
+//!
+//! **The dependency set is audited, not just pinned.** `cargo vet` certifies the *delta* between the
+//! versions we had and the versions we take, weekly, so an upgrade is a reviewed change rather than a
+//! version bump nobody read.
+//!
+//! [`Wrapper`]: provenance::Lineage::Wrapper
+//! [`Tracked`]: provenance::Lineage::Tracked
+//! [`Inspired`]: provenance::Lineage::Inspired
+//! [`Original`]: provenance::Lineage::Original
+
+pub mod provenance;
+pub mod theme;
+
+pub use provenance::{Lineage, Origin, Provenance};
+pub use theme::{Mode, DEFAULT_DARK, DEFAULT_LIGHT, Palette};

@@ -1,0 +1,81 @@
+# The weekly audited upgrade.
+#
+# Takes the latest of everything, then opens a PR carrying the *diffs* — not a version list. The PR
+# cannot merge until each new delta is certified, because `cargo vet` is a required check and it fails
+# on anything nobody has reviewed. That is the whole design: an upgrade is a reviewed change.
+name: Weekly upgrade
+
+on:
+  schedule:
+    # Monday morning, so the review is a week's work rather than a month's.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  upgrade:
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-vet,cargo-deny,cargo-audit
+
+      # Latest stable including majors, per the org toolchain policy. A major that needs a migration
+      # will fail the gate rather than land quietly, which is the intended outcome.
+      - name: Take the latest
+        run: cargo update
+
+      # Peers first: a delta Mozilla or Google has already reviewed needs no second reading, and
+      # importing before suggesting is what keeps the human backlog to what nobody has read.
+      - name: Refresh imported audits
+        run: |
+          cargo vet prune || true
+
+      - name: What changed, and what still needs reading
+        id: review
+        run: |
+          {
+            echo '## Deltas taken'
+            echo
+            echo '```'
+            git --no-pager diff --no-color Cargo.lock | grep -E '^[+-]name|^[+-]version' || echo 'no version changes'
+            echo '```'
+            echo
+            echo '## Still uncertified'
+            echo
+            echo 'Each line is a diff to read, smallest first. `cargo vet certify <crate> <old> <new>`'
+            echo 'once read; `cargo vet trust` where a publisher the peers already trust is the basis.'
+            echo
+            echo '```'
+            cargo vet suggest 2>&1 | head -60 || true
+            echo '```'
+            echo
+            echo '## Advisories'
+            echo
+            echo '```'
+            cargo audit 2>&1 | tail -30 || true
+            echo '```'
+          } > /tmp/review.md
+          cat /tmp/review.md >> "$GITHUB_STEP_SUMMARY"
+
+      # Reported rather than gated here: this job's output is a PR, and the PR's own CI is the gate.
+      # Failing the opener would leave nobody looking at the advisories it found.
+      - name: Licences and advisories
+        continue-on-error: true
+        run: |
+          cargo deny --all-features check
+          cargo audit
+
+      - uses: peter-evans/create-pull-request@v8
+        with:
+          branch: weekly-upgrade
+          title: "chore(deps): weekly upgrade"
+          body-path: /tmp/review.md
+          commit-message: "chore(deps): take the week's dependency updates"
+          labels: dependencies
+          delete-branch: true

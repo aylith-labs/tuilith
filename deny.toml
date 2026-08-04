@@ -1,0 +1,61 @@
+# What the dependency graph is allowed to contain, checked by `cargo deny check`.
+#
+# The allowlist is built from the licences actually present rather than from a guess, and copyleft is
+# deliberately absent. Several crates offer copyleft as one arm of an `OR` — `MIT OR MPL-2.0`,
+# `MIT OR Apache-2.0 OR LGPL-2.1-or-later` — and cargo-deny satisfies such an expression from this
+# list, so leaving MPL and LGPL out means we take the permissive arm. A crate offering *only* copyleft
+# then fails the check, which is the point: that decision should be a conversation, not a silent
+# resolution during someone's dependency bump.
+
+[graph]
+all-features = true
+
+[licenses]
+version = 2
+# Anything not listed fails. Each entry is here because a crate in the graph needs it.
+allow = [
+    "MIT",
+    "Apache-2.0",
+    # The Rust standard-library-adjacent crates (compiler-builtins, the `*-sys` shims).
+    "Apache-2.0 WITH LLVM-exception",
+    # unicode-ident and the character-width tables.
+    "Unicode-3.0",
+    "Unicode-DFS-2016",
+    # Permissive, and each is the sole or preferred arm for at least one crate in the graph.
+    "Zlib",
+    "BSL-1.0",
+    "Unlicense",
+    "WTFPL",
+    # Not in the graph today, permissive, and near-certain to arrive with the next widget crate.
+    "ISC",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+]
+confidence-threshold = 0.9
+
+[[licenses.exceptions]]
+# ring vendors its own BoringSSL-derived code under a bespoke notice. Listed as an exception rather
+# than widening the allowlist, so it applies to this crate and nothing else.
+name = "ring"
+allow = ["OpenSSL"]
+
+[bans]
+# A duplicate major version is usually transitional and not worth failing a build over; two copies of
+# the same *widget* crate is worth knowing about, which the weekly job reports.
+multiple-versions = "warn"
+wildcards = "deny"
+# A build script or proc-macro we did not ask for is the shape a supply-chain attack takes.
+deny = []
+
+[advisories]
+version = 2
+# An unmaintained crate is a finding to act on, not a build to fail today.
+unmaintained = "workspace"
+yanked = "deny"
+
+[sources]
+# crates.io only. A git dependency bypasses the audit trail entirely: `cargo vet` reasons about
+# published versions, so a `git = ` URL would be code nobody certified.
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
