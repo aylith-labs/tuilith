@@ -1,5 +1,13 @@
 # tuilith — Claude Code guidance
 
+<!-- aylith-handbook:start -->
+> **📖 Aylith handbook (authoritative).** This repo is part of the `aylith-labs` lab. Before any
+> cross-repo, catalog, design-system, CI/runner, or data-flow work you **must** consult the org
+> handbook — the single source of truth for these conventions:
+> https://github.com/aylith-labs/aylith-handbook (locally `../aylith-handbook/`, skill `aylith-labs`).
+<!-- aylith-handbook:end -->
+
+
 ## Project Overview
 
 A curated, audited component library for [ratatui](https://ratatui.rs) terminal UIs, consumed by the
