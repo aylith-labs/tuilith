@@ -121,8 +121,22 @@ user-login = "dtolnay"
 user-name = "David Tolnay"
 
 [[publisher.thiserror]]
+version = "1.0.69"
+when = "2024-11-10"
+user-id = 3618
+user-login = "dtolnay"
+user-name = "David Tolnay"
+
+[[publisher.thiserror]]
 version = "2.0.19"
 when = "2026-07-18"
+user-id = 3618
+user-login = "dtolnay"
+user-name = "David Tolnay"
+
+[[publisher.thiserror-impl]]
+version = "1.0.69"
+when = "2024-11-10"
 user-id = 3618
 user-login = "dtolnay"
 user-name = "David Tolnay"
@@ -161,6 +175,11 @@ when = "2026-06-12"
 user-id = 1
 user-login = "alexcrichton"
 user-name = "Alex Crichton"
+
+[[publisher.wit-bindgen]]
+version = "0.57.1"
+when = "2026-04-17"
+trusted-publisher = "github:bytecodealliance/wit-bindgen"
 
 [[publisher.zmij]]
 version = "1.0.23"
@@ -241,6 +260,15 @@ relevant assertions, although could use some comments and some slight
 refactoring into helpers to dedupe unsafe blocks in my personal opinion.
 """
 
+[[audits.bytecode-alliance.audits.foldhash]]
+who = "Alex Crichton <alex@alexcrichton.com>"
+criteria = "safe-to-deploy"
+version = "0.1.3"
+notes = """
+Only a minor amount of `unsafe` code in this crate related to global per-process
+initialization which looks correct to me.
+"""
+
 [[audits.bytecode-alliance.audits.heck]]
 who = "Alex Crichton <alex@alexcrichton.com>"
 criteria = "safe-to-deploy"
@@ -252,6 +280,24 @@ who = "Alex Crichton <alex@alexcrichton.com>"
 criteria = "safe-to-deploy"
 delta = "0.2.0 -> 0.2.1"
 notes = "Minor update, nothing major"
+
+[[audits.bytecode-alliance.audits.num-traits]]
+who = "Andrew Brown <andrew.brown@intel.com>"
+criteria = "safe-to-deploy"
+version = "0.2.19"
+notes = "As advertised: a numeric library. The only `unsafe` is from some float-to-int conversions, which seems expected."
+
+[[audits.bytecode-alliance.audits.smallvec]]
+who = "Alex Crichton <alex@alexcrichton.com>"
+criteria = "safe-to-deploy"
+delta = "1.13.2 -> 1.14.0"
+notes = "Minor new feature, nothing out of the ordinary."
+
+[[audits.bytecode-alliance.audits.static_assertions]]
+who = "Andrew Brown <andrew.brown@intel.com>"
+criteria = "safe-to-deploy"
+version = "1.1.0"
+notes = "No dependencies and completely a compile-time crate as advertised. Uses `unsafe` in one module as a compile-time check only: `mem::transmute` and `ptr::write` are wrapped in an impossible-to-run closure."
 
 [[audits.embark-studios.audits.cfg_aliases]]
 who = "Johan Andersson <opensource@embark-studios.com>"
@@ -271,17 +317,11 @@ criteria = "safe-to-deploy"
 version = "2.2.1"
 notes = "No unsafe usage or ambient capabilities"
 
-[[audits.embark-studios.audits.thiserror]]
+[[audits.embark-studios.audits.utf8parse]]
 who = "Johan Andersson <opensource@embark-studios.com>"
 criteria = "safe-to-deploy"
-version = "1.0.40"
-notes = "Wrapper over implementation crate, found no unsafe or ambient capabilities used"
-
-[[audits.embark-studios.audits.thiserror-impl]]
-who = "Johan Andersson <opensource@embark-studios.com>"
-criteria = "safe-to-deploy"
-version = "1.0.40"
-notes = "Found no unsafe or ambient capabilities used"
+version = "0.2.1"
+notes = "Single unsafe usage that looks sound, no ambient capabilities"
 
 [[audits.google.audits.base64]]
 who = "amarjotgill <amarjotgill@google.com>"
@@ -316,18 +356,6 @@ who = "Jonathan Hao <phao@chromium.org>"
 criteria = "safe-to-deploy"
 delta = "1.0.1 -> 1.0.2"
 notes = "No changes to any .rs files or Rust code."
-aggregated-from = "https://chromium.googlesource.com/chromium/src/+/main/third_party/rust/chromium_crates_io/supply-chain/audits.toml?format=TEXT"
-
-[[audits.google.audits.foldhash]]
-who = "Lukasz Anforowicz <lukasza@chromium.org>"
-criteria = "safe-to-deploy"
-version = "0.1.3"
-notes = """
-`ub-risk-2` review notes can be found in https://crrev.com/c/6071306/5/third_party/rust/chromium_crates_io/vendor/foldhash-0.1.3/src/seed.rs
-
-`does-not-implement-crypto` based on `README.md` which explicitly says that
-"Foldhash is **not appropriate for any cryptographic purpose**."
-"""
 aggregated-from = "https://chromium.googlesource.com/chromium/src/+/main/third_party/rust/chromium_crates_io/supply-chain/audits.toml?format=TEXT"
 
 [[audits.google.audits.foldhash]]
@@ -385,13 +413,6 @@ version = "7.1.3"
 notes = """
 Reviewed in https://chromium-review.googlesource.com/c/chromium/src/+/5046153
 """
-aggregated-from = "https://chromium.googlesource.com/chromium/src/+/main/third_party/rust/chromium_crates_io/supply-chain/audits.toml?format=TEXT"
-
-[[audits.google.audits.num-traits]]
-who = "Manish Goregaokar <manishearth@google.com>"
-criteria = "safe-to-deploy"
-version = "0.2.19"
-notes = "Contains a single line of float-to-int unsafe with decent safety comments"
 aggregated-from = "https://chromium.googlesource.com/chromium/src/+/main/third_party/rust/chromium_crates_io/supply-chain/audits.toml?format=TEXT"
 
 [[audits.google.audits.quote]]
@@ -459,37 +480,6 @@ criteria = "safe-to-deploy"
 version = "1.13.2"
 aggregated-from = "https://chromium.googlesource.com/chromium/src/+/main/third_party/rust/chromium_crates_io/supply-chain/audits.toml?format=TEXT"
 
-[[audits.google.audits.smallvec]]
-who = "Jonathan Hao <phao@chromium.org>"
-criteria = "safe-to-deploy"
-delta = "1.13.2 -> 1.14.0"
-notes = """
-WARNING: This certification is a result of a **partial** audit. The
-`malloc_size_of` feature has **not** been audited. This feature does
-not explicitly document its safety requirements.
-See also https://chromium-review.googlesource.com/c/chromium/src/+/6275133/comment/ea0d7a93_98051a2e/
-and https://github.com/servo/malloc_size_of/issues/8.
-This feature is banned in gnrt_config.toml.
-"""
-aggregated-from = "https://chromium.googlesource.com/chromium/src/+/main/third_party/rust/chromium_crates_io/supply-chain/audits.toml?format=TEXT"
-
-[[audits.google.audits.static_assertions]]
-who = "Lukasz Anforowicz <lukasza@chromium.org>"
-criteria = "safe-to-deploy"
-version = "1.1.0"
-notes = """
-Grepped for `-i cipher`, `-i crypto`, `'\bfs\b'`, `'\bnet\b'`, `'\bunsafe\b'`
-and there were no hits except for one `unsafe`.
-
-The lambda where `unsafe` is used is never invoked (e.g. the `unsafe` code
-never runs) and is only introduced for some compile-time checks.  Additional
-unsafe review comments can be found in https://crrev.com/c/5353376.
-
-This crate has been added to Chromium in https://crrev.com/c/3736562.  The CL
-description contains a link to a document with an additional security review.
-"""
-aggregated-from = "https://chromium.googlesource.com/chromium/src/+/main/third_party/rust/chromium_crates_io/supply-chain/audits.toml?format=TEXT"
-
 [[audits.google.audits.strsim]]
 who = "danakj@chromium.org"
 criteria = "safe-to-deploy"
@@ -506,13 +496,6 @@ who = "Ying Hsu <yinghsu@chromium.org>"
 criteria = "safe-to-run"
 version = "3.10.1"
 aggregated-from = "https://chromium.googlesource.com/chromiumos/third_party/rust_crates/+/refs/heads/main/cargo-vet/audits.toml?format=TEXT"
-
-[[audits.google.audits.utf8parse]]
-who = "David Koloski <dkoloski@google.com>"
-criteria = "safe-to-deploy"
-version = "0.2.1"
-notes = "Reviewed on https://fxrev.dev/904811"
-aggregated-from = "https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/third_party/rust_crates/supply-chain/audits.toml?format=TEXT"
 
 [[audits.isrg.audits.block-buffer]]
 who = "David Cook <dcook@divviup.org>"
@@ -543,16 +526,6 @@ version = "0.10.2"
 who = "David Cook <dcook@divviup.org>"
 criteria = "safe-to-deploy"
 delta = "0.10.8 -> 0.10.9"
-
-[[audits.isrg.audits.thiserror]]
-who = "Brandon Pitman <bran@bran.land>"
-criteria = "safe-to-deploy"
-delta = "1.0.40 -> 1.0.43"
-
-[[audits.isrg.audits.thiserror-impl]]
-who = "Brandon Pitman <bran@bran.land>"
-criteria = "safe-to-deploy"
-delta = "1.0.40 -> 1.0.43"
 
 [[audits.mozilla.wildcard-audits.euclid]]
 who = "Nicolas Silva <nical@fastmail.com>"
@@ -838,18 +811,6 @@ who = "Jim Blandy <jimb@red-bean.com>"
 criteria = "safe-to-deploy"
 delta = "3.16.0 -> 3.27.0"
 aggregated-from = "https://hg.mozilla.org/mozilla-central/raw-file/tip/supply-chain/audits.toml"
-
-[[audits.mozilla.audits.thiserror]]
-who = "Jan-Erik Rediger <jrediger@mozilla.com>"
-criteria = "safe-to-deploy"
-delta = "1.0.43 -> 1.0.69"
-aggregated-from = "https://raw.githubusercontent.com/mozilla/glean/main/supply-chain/audits.toml"
-
-[[audits.mozilla.audits.thiserror-impl]]
-who = "Jan-Erik Rediger <jrediger@mozilla.com>"
-criteria = "safe-to-deploy"
-delta = "1.0.43 -> 1.0.69"
-aggregated-from = "https://raw.githubusercontent.com/mozilla/glean/main/supply-chain/audits.toml"
 
 [[audits.mozilla.audits.time-core]]
 who = "Kershaw Chang <kershaw@mozilla.com>"
