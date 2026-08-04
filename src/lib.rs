@@ -17,6 +17,7 @@
 //! [`Inspired`]: provenance::Lineage::Inspired
 //! [`Original`]: provenance::Lineage::Original
 
+pub mod document_tree;
 pub mod provenance;
 pub mod theme;
 
