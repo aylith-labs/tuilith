@@ -40,9 +40,14 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # Pinned, not `@latest`. cargo-vet's only release with prebuilt binaries is v0.10.0 (2024-10-03)
+      # — 0.10.1 and 0.10.2 shipped to crates.io without release assets — so an unpinned install-action
+      # silently gives 0.10.0, whose parser cannot read the trusted-publisher entries that 0.10.2
+      # writes into imports.lock. A tool whose output another copy of itself has to parse must be the
+      # same version on both sides, so the version lives here and moves deliberately.
       - uses: taiki-e/install-action@v2
         with:
-          tool: cargo-vet,cargo-deny
+          tool: cargo-vet@0.10.2,cargo-deny@0.20.2
 
       # Every dependency delta we take has to have been reviewed by someone we trust — us, or one of
       # the audit sets we import. An uncertified delta fails here, which is the whole point.
