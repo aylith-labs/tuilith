@@ -26,6 +26,14 @@ jobs:
       - run: cargo test --workspace
       - run: cargo build --workspace --release
 
+      # Every feature this crate offers to turn off has to still compile with it off. A feature is only
+      # an escape hatch if the build someone gets by taking it is clean — and `cargo test` would not say
+      # so, because it does not deny warnings, so the check has to be clippy's.
+      - name: the optional features are optional
+        run: |
+          cargo clippy --workspace --all-targets --no-default-features -- -D warnings
+          cargo test --workspace --no-default-features
+
       # The published record has to match what the components declare. Rendered from the registry and
       # diff-checked here, so it cannot claim a lineage the code no longer has.
       - name: PROVENANCE.md is current

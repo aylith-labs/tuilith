@@ -10,7 +10,6 @@
 //! with no colour needs, and it needs no special case anywhere else.
 
 use ratatui::style::Color;
-use terminal_colorsaurus::{QueryOptions, ThemeMode};
 
 crate::provenance! {
     component: "theme",
@@ -41,6 +40,51 @@ pub struct Palette {
     pub warn: Color,
     /// Status: failed.
     pub bad: Color,
+}
+
+impl Palette {
+    /// Every role's colour, so a check can iterate the palette without naming nine fields.
+    ///
+    /// Order matches the struct's, but nothing should depend on it: this exists for membership tests —
+    /// "is this colour one of ours" — not for indexing.
+    #[must_use]
+    pub fn roles(self) -> [Color; 9] {
+        [
+            self.background,
+            self.foreground,
+            self.dim,
+            self.border,
+            self.accent,
+            self.selection,
+            self.ok,
+            self.warn,
+            self.bad,
+        ]
+    }
+
+    /// Which role a colour is, when it is one of this palette's.
+    ///
+    /// For a report about a rendered frame: a failure that says `dim on selection` is one somebody can
+    /// act on, where the same failure quoting two hex values is one they have to decode first. A colour
+    /// the palette does not contain has no name here, which is itself worth reporting.
+    #[must_use]
+    pub fn role_of(self, colour: Color) -> Option<&'static str> {
+        const NAMES: [&str; 9] = [
+            "background",
+            "foreground",
+            "dim",
+            "border",
+            "accent",
+            "selection",
+            "ok",
+            "warn",
+            "bad",
+        ];
+        self.roles()
+            .iter()
+            .position(|role| *role == colour)
+            .map(|at| NAMES[at])
+    }
 }
 
 /// The default dark variant.
@@ -83,18 +127,28 @@ pub enum Mode {
 }
 
 impl Mode {
-    /// What the terminal answers, or dark when it answers nothing.
+    /// What the background signals answer, or dark when none of them does.
     ///
     /// Dark is the safer guess on an unknown background: light text on an unknown background is more
     /// often readable than dark text on one.
     ///
-    /// Query this **before** entering the alternate screen — the reply arrives on the same terminal,
-    /// and asking after the UI is up prints the answer into the frame.
+    /// Query this **before** entering the alternate screen — the OSC reply arrives on the same
+    /// terminal, and asking after the UI is up prints the answer into the frame.
+    ///
+    /// This discards *which* signal answered. Use [`crate::background::read`] where that matters, which
+    /// is anywhere the answer is shown to a person: a mode nobody observed is a guess, and a guess that
+    /// cannot be told apart from an observation is one nobody will ever question.
     #[must_use]
     pub fn detect() -> Self {
-        match terminal_colorsaurus::theme_mode(QueryOptions::default()) {
-            Ok(ThemeMode::Light) => Self::Light,
-            _ => Self::Dark,
+        crate::background::read().mode
+    }
+
+    /// The word for it, for a diagnostics line or a toggle's label.
+    #[must_use]
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Light => "light",
+            Self::Dark => "dark",
         }
     }
 
@@ -124,6 +178,8 @@ mod tests {
     #[test]
     fn both_variants_define_every_role_differently_from_their_background() {
         for palette in [DEFAULT_DARK, DEFAULT_LIGHT] {
+            // Named rather than taken from `roles()`, which includes the background: skipping it by
+            // value would make the assertion below a tautology that can never fail.
             for role in [
                 palette.foreground,
                 palette.dim,
@@ -143,36 +199,20 @@ mod tests {
     }
 
     #[test]
-    fn the_two_variants_share_no_colour_so_a_leak_between_them_is_detectable() {
-        // What makes the "did this frame draw in the wrong mode" test possible at all: if a role held
-        // the same value in both, a leak in that role could not be seen.
-        let dark = [
-            DEFAULT_DARK.background,
-            DEFAULT_DARK.foreground,
-            DEFAULT_DARK.dim,
-            DEFAULT_DARK.border,
-            DEFAULT_DARK.accent,
-            DEFAULT_DARK.selection,
-            DEFAULT_DARK.ok,
-            DEFAULT_DARK.warn,
-            DEFAULT_DARK.bad,
-        ];
-        let light = [
-            DEFAULT_LIGHT.background,
-            DEFAULT_LIGHT.foreground,
-            DEFAULT_LIGHT.dim,
-            DEFAULT_LIGHT.border,
-            DEFAULT_LIGHT.accent,
-            DEFAULT_LIGHT.selection,
-            DEFAULT_LIGHT.ok,
-            DEFAULT_LIGHT.warn,
-            DEFAULT_LIGHT.bad,
-        ];
-        for (role, colour) in dark.iter().enumerate() {
-            assert_ne!(
-                *colour, light[role],
-                "role {role} is the same in both variants"
-            );
+    fn no_colour_appears_in_both_variants_at_all_so_a_leak_between_them_is_detectable() {
+        // What makes the "did this frame draw in the wrong mode" check possible: a colour shared by the
+        // two palettes is one that check can never see.
+        //
+        // Set-wise rather than role-by-role, and the difference is the point. Comparing `dark.dim` only
+        // with `light.dim` passes when `light.dim` equals `dark.border` — a real collision, and one that
+        // would silently blind the leak check for both of those roles while this test stayed green.
+        for dark in DEFAULT_DARK.roles() {
+            for light in DEFAULT_LIGHT.roles() {
+                assert_ne!(
+                    dark, light,
+                    "a colour in both palettes cannot be attributed to either"
+                );
+            }
         }
     }
 

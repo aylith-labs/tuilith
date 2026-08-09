@@ -17,9 +17,14 @@
 //! [`Inspired`]: provenance::Lineage::Inspired
 //! [`Original`]: provenance::Lineage::Original
 
+pub mod background;
 pub mod document_tree;
+pub mod inspect;
+pub mod overlay;
 pub mod provenance;
 pub mod theme;
 
+pub use background::{Reading, Source};
+pub use overlay::Overlay;
 pub use provenance::{Lineage, Origin, Provenance};
 pub use theme::{Mode, DEFAULT_DARK, DEFAULT_LIGHT, Palette};

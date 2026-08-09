@@ -6,10 +6,13 @@ Every component, where it came from, and what that means for depending on it. A 
 is upstream's code re-exported, so its API moves when upstream's does. A **tracked fork** is
 upstream's code vendored at a revision with our additions logged, so upstream's later fixes
 can still be taken. **Inspired** is our own implementation of an idea seen elsewhere, sharing
-no code with it — nothing can be pulled from what inspired it. **Original** was first written
-here.
+no code with it — nothing can be pulled from what inspired it. **Original** owes nothing to
+anyone else's code; the Origin column says which of our repositories it was first written in.
 
 | Component | Kind | Origin | Upstream | Since | What it is |
 |---|---|---|---|---|---|
+| `background` | original | polygit | — | 0.1 | Terminal dark/light resolution over four ordered signals, reporting which one answered |
 | `document_tree` | inspired | a private repo | after polygit's settings preview | 0.1 | A JSON document as a tree you can fold, with per-node counts and folds held by path |
+| `inspect` | original | tuilith | — | 0.1 | Painted, readable and right-variant assertions over a rendered buffer |
+| `overlay` | original | tuilith | — | 0.1 | A floating surface that clears and repaints from the theme, so it cannot come out unpainted |
 | `theme` | original | a private repo | — | 0.1 | Nine semantic colour roles as a light and dark pair, with terminal background detection |

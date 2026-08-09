@@ -16,6 +16,14 @@ categories = ["command-line-interface"]
 # cannot read it from the crate they installed.
 include = ["src/**", "README.md", "PROVENANCE.md", "LICENSE-*", "CHANGELOG.md"]
 
+[features]
+default = ["os-appearance"]
+# Reading the desktop's light/dark setting means running `reg.exe` under WSL and `defaults` on macOS.
+# Those are the signals that answer where the terminal itself does not, so they are on by default — but
+# a library spawning processes is a fair thing to refuse, and refusing costs only those two signals:
+# the OSC query and `COLORFGBG` still work, and `Source` says when nothing answered.
+os-appearance = []
+
 [lints.rust]
 missing_docs = "warn"
 unsafe_code = "forbid"

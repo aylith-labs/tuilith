@@ -43,7 +43,8 @@ pub enum Lineage {
         /// What it was learned from, named so the debt is visible.
         by: &'static str,
     },
-    /// First written here.
+    /// Owes nothing to anyone else's code. [`Origin`] says which of our repositories wrote it first,
+    /// which is not always this one — a component moved here from another of ours is still original.
     Original,
 }
 
@@ -160,8 +161,8 @@ pub fn render() -> String {
          is upstream's code re-exported, so its API moves when upstream's does. A **tracked fork** is\n\
          upstream's code vendored at a revision with our additions logged, so upstream's later fixes\n\
          can still be taken. **Inspired** is our own implementation of an idea seen elsewhere, sharing\n\
-         no code with it — nothing can be pulled from what inspired it. **Original** was first written\n\
-         here.\n\n\
+         no code with it — nothing can be pulled from what inspired it. **Original** owes nothing to\n\
+         anyone else's code; the Origin column says which of our repositories it was first written in.\n\n\
          | Component | Kind | Origin | Upstream | Since | What it is |\n\
          |---|---|---|---|---|---|\n",
     );
