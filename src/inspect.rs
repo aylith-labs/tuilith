@@ -136,6 +136,11 @@ impl fmt::Display for Leak {
 /// it is also hard to read. This is sound only while the two palettes share no colour — a value in both
 /// could not be attributed to either.
 ///
+/// A blank cell is judged on its background alone, the same asymmetry [`fully_painted`] uses and for the
+/// same reason: nothing draws there, so its glyph colour is not on screen. This is not a concession —
+/// an animation that interpolates foregrounds legitimately parks arbitrary colours on empty cells, and
+/// flagging those would report an invisible value as a visible defect.
+///
 /// # Errors
 ///
 /// The first cell drawn in the other variant.
@@ -143,7 +148,12 @@ pub fn no_leak(buffer: &Buffer, area: Rect, other: Palette) -> Result<(), Leak> 
     for row in area.top()..area.bottom().min(buffer.area.bottom()) {
         for column in area.left()..area.right().min(buffer.area.right()) {
             let cell = &buffer[(column, row)];
-            for colour in [cell.fg, cell.bg] {
+            let visible = if cell.symbol().trim().is_empty() {
+                vec![cell.bg]
+            } else {
+                vec![cell.fg, cell.bg]
+            };
+            for colour in visible {
                 if let Some(role) = other.role_of(colour) {
                     return Err(Leak {
                         at: (column, row),
@@ -370,11 +380,29 @@ mod tests {
         no_leak(&buffer, area, DEFAULT_LIGHT).expect("a dark frame holds no light colour");
 
         // The real bug shape: one draw call reaching for a constant instead of the palette it was given.
-        buffer[(2, 1)].set_fg(DEFAULT_LIGHT.accent);
+        buffer[(2, 1)].set_symbol("x").set_fg(DEFAULT_LIGHT.accent);
         let leak =
             no_leak(&buffer, buffer.area, DEFAULT_LIGHT).expect_err("the light accent is a leak");
         assert_eq!(leak.at, (2, 1));
         assert_eq!(leak.role, "accent");
+    }
+
+    #[test]
+    fn an_invisible_foreground_is_not_a_leak_but_a_visible_one_is() {
+        // An animation that interpolates foregrounds parks arbitrary colours on empty cells, and flagging
+        // those would report something nobody can see. The pair is what proves the distinction is the
+        // glyph rather than a check quietly loosened to get a green run.
+        let mut buffer = buffer(3, 1);
+        let area = buffer.area;
+        let _ = Overlay::new(DEFAULT_DARK).draw_on(&mut buffer, area);
+        buffer[(1, 0)].set_fg(DEFAULT_LIGHT.background);
+        no_leak(&buffer, area, DEFAULT_LIGHT).expect("a blank cell's glyph colour is not on screen");
+
+        buffer[(1, 0)].set_symbol("x");
+        let leak = no_leak(&buffer, area, DEFAULT_LIGHT)
+            .expect_err("the same colour under a glyph is visible");
+        assert_eq!(leak.at, (1, 0));
+        assert_eq!(leak.role, "background");
     }
 
     #[test]
