@@ -141,6 +141,13 @@ impl fmt::Display for Leak {
 /// an animation that interpolates foregrounds legitimately parks arbitrary colours on empty cells, and
 /// flagging those would report an invisible value as a visible defect.
 ///
+/// Pure white and pure black are never attributed to a palette either, for a reason worth stating: they
+/// are the saturation points of every lighten and darken operation, so an effect that lifts a colour's
+/// lightness arrives at one of them whatever it started from. A palette that uses either as a role
+/// therefore cannot be told apart from an animation at its peak — measured on a shimmer that lifts a
+/// dark theme's foreground to `#FFFFFF`, which is a light theme's background exactly. The other roles
+/// keep their full strength; only these two are unattributable.
+///
 /// # Errors
 ///
 /// The first cell drawn in the other variant.
@@ -154,6 +161,9 @@ pub fn no_leak(buffer: &Buffer, area: Rect, other: Palette) -> Result<(), Leak> 
                 vec![cell.fg, cell.bg]
             };
             for colour in visible {
+                if at_a_saturation_point(colour) {
+                    continue;
+                }
                 if let Some(role) = other.role_of(colour) {
                     return Err(Leak {
                         at: (column, row),
@@ -164,6 +174,19 @@ pub fn no_leak(buffer: &Buffer, area: Rect, other: Palette) -> Result<(), Leak> 
         }
     }
     Ok(())
+}
+
+/// Whether a colour is where every lighten or darken operation ends up, and so belongs to nobody.
+fn at_a_saturation_point(colour: Color) -> bool {
+    match colour {
+        Color::Rgb(red, green, blue) => {
+            let channels = (red, green, blue);
+            channels == (0, 0, 0) || channels == (255, 255, 255)
+        }
+        // The same two colours as the fixed part of the xterm palette.
+        Color::Indexed(index) => index == 16 || index == 231,
+        _ => false,
+    }
 }
 
 /// A pair of colours that do not have enough contrast between them.
@@ -388,6 +411,34 @@ mod tests {
     }
 
     #[test]
+    fn a_saturation_point_belongs_to_nobody_but_every_other_role_still_leaks() {
+        // Measured on a real shimmer: lifting a dark theme's foreground reaches #FFFFFF, which is a light
+        // theme's background exactly. So white cannot be attributed — and the carve-out has to be those
+        // two colours only, which is what the second half asserts.
+        let mut buffer = buffer(2, 1);
+        let area = buffer.area;
+        let _ = Overlay::new(DEFAULT_DARK).draw_on(&mut buffer, area);
+        buffer[(0, 0)]
+            .set_symbol("x")
+            .set_fg(Color::Rgb(255, 255, 255));
+        assert_eq!(DEFAULT_LIGHT.background, Color::Rgb(255, 255, 255));
+        no_leak(&buffer, area, DEFAULT_LIGHT).expect("white is where every lift ends up");
+
+        buffer[(0, 0)].set_fg(Color::Rgb(0, 0, 0));
+        no_leak(&buffer, area, DEFAULT_LIGHT).expect("black is where every darken ends up");
+
+        for role in DEFAULT_LIGHT.roles() {
+            if at_a_saturation_point(role) {
+                continue;
+            }
+            buffer[(0, 0)].set_fg(role);
+            let name = DEFAULT_LIGHT.role_of(role).expect("a role of that palette");
+            no_leak(&buffer, area, DEFAULT_LIGHT)
+                .expect_err(&format!("`{name}` slipped through the leak check"));
+        }
+    }
+
+    #[test]
     fn an_invisible_foreground_is_not_a_leak_but_a_visible_one_is() {
         // An animation that interpolates foregrounds parks arbitrary colours on empty cells, and flagging
         // those would report something nobody can see. The pair is what proves the distinction is the
@@ -395,14 +446,16 @@ mod tests {
         let mut buffer = buffer(3, 1);
         let area = buffer.area;
         let _ = Overlay::new(DEFAULT_DARK).draw_on(&mut buffer, area);
-        buffer[(1, 0)].set_fg(DEFAULT_LIGHT.background);
+        // A role that is not a saturation point, so this test is about the glyph rather than about the
+        // carve-out above it.
+        buffer[(1, 0)].set_fg(DEFAULT_LIGHT.accent);
         no_leak(&buffer, area, DEFAULT_LIGHT).expect("a blank cell's glyph colour is not on screen");
 
         buffer[(1, 0)].set_symbol("x");
         let leak = no_leak(&buffer, area, DEFAULT_LIGHT)
             .expect_err("the same colour under a glyph is visible");
         assert_eq!(leak.at, (1, 0));
-        assert_eq!(leak.role, "background");
+        assert_eq!(leak.role, "accent");
     }
 
     #[test]
