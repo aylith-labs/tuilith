@@ -43,6 +43,70 @@ crate::provenance! {
     since: "0.1",
 }
 
+/// Push everything in `area` into the background, so what is drawn next reads as being in front.
+///
+/// A terminal has no alpha, so a scrim cannot be a translucent layer over the page — it has to be the page
+/// itself, restyled. Every glyph's colour moves most of the way toward the surface behind it, which is what
+/// "receded" looks like when the only channels available are hue and contrast: the text is still there, and
+/// it is plainly not what you are being asked to read.
+///
+/// Backgrounds are left alone deliberately. Flattening them would erase the selected row, the pane
+/// boundaries and every band the page uses to say where things are — so the page would not recede, it would
+/// dissolve, and dismissing the modal would look like arriving somewhere new.
+///
+/// Call it before drawing the thing in front. Nothing enforces that order, because a scrim over the modal
+/// as well would simply dim the modal too, which is visible immediately rather than subtly wrong.
+pub fn scrim(buffer: &mut Buffer, area: Rect, palette: Palette) {
+    for row in area.top()..area.bottom().min(buffer.area.bottom()) {
+        for column in area.left()..area.right().min(buffer.area.right()) {
+            let cell = &mut buffer[(column, row)];
+            let behind = if cell.bg == Color::Reset {
+                palette.background
+            } else {
+                cell.bg
+            };
+            cell.fg = toward(cell.fg, behind, palette);
+        }
+    }
+}
+
+/// How far a scrimmed glyph travels toward the surface behind it, in hundredths.
+///
+/// Most of the way, not all: at 100 the text vanishes and the page reads as blank rather than as behind
+/// something, which loses the sense that dismissing the modal returns you to where you were. In hundredths
+/// so the blend is integer arithmetic — a weighted average of two bytes needs no float, and a float here
+/// would only be a cast waiting to lose a sign.
+const RECEDE_IN_HUNDREDTHS: u8 = 72;
+
+/// A colour moved most of the way toward another.
+///
+/// A colour with no fixed value cannot be blended — a named ANSI colour is whatever the terminal says it is
+/// — so those are left as they are. Dimming them would need to invent their value first, and a scrim is not
+/// worth guessing for.
+fn toward(colour: Color, behind: Color, palette: Palette) -> Color {
+    let resolve = |value: Color| match value {
+        Color::Reset => match palette.foreground {
+            Color::Rgb(red, green, blue) => Some((red, green, blue)),
+            _ => None,
+        },
+        Color::Rgb(red, green, blue) => Some((red, green, blue)),
+        _ => None,
+    };
+    let (Some(from), Some(to)) = (resolve(colour), resolve(behind)) else {
+        return colour;
+    };
+    // Integer arithmetic, so there is no float to cast back and no sign to lose: the blend is a weighted
+    // average of two bytes, which `u32` holds exactly.
+    let mix = |start: u8, end: u8| {
+        let start = u32::from(start);
+        let end = u32::from(end);
+        let toward_end = u32::from(RECEDE_IN_HUNDREDTHS);
+        let blended = (start * (100 - toward_end) + end * toward_end + 50) / 100;
+        u8::try_from(blended.min(255)).unwrap_or(u8::MAX)
+    };
+    Color::Rgb(mix(from.0, to.0), mix(from.1, to.1), mix(from.2, to.2))
+}
+
 /// A surface to draw over a page: a modal, a notice, a popover, a pane.
 ///
 /// Built like a [`Block`], because it is one underneath — but it owns the palette, so drawing it always
@@ -142,6 +206,84 @@ mod tests {
 
     fn buffer(width: u16, height: u16) -> Buffer {
         Buffer::empty(Rect::new(0, 0, width, height))
+    }
+
+    #[test]
+    fn a_scrim_recedes_the_text_and_leaves_the_bands_that_say_where_things_are() {
+        let palette = Mode::Dark.palette();
+        let mut buffer = buffer(6, 2);
+        let area = Rect::new(0, 0, 6, 2);
+        buffer.set_style(
+            area,
+            Style::new().bg(palette.background).fg(palette.foreground),
+        );
+        buffer[(0, 0)].set_symbol("t");
+        // A selected row: its band is how the page says where the cursor is.
+        buffer[(0, 1)].set_symbol("s").set_bg(palette.selection);
+
+        scrim(&mut buffer, area, palette);
+
+        let receded = buffer[(0, 0)].fg;
+        assert_ne!(
+            receded, palette.foreground,
+            "the text did not recede at all"
+        );
+        assert_ne!(
+            receded, palette.background,
+            "the text vanished instead of receding"
+        );
+        // Still readable as text, just not as the thing being read: closer to the surface than to where it
+        // started, which is what makes the layer in front look in front.
+        let distance = |from: Color, to: Color| match (from, to) {
+            (Color::Rgb(one, two, three), Color::Rgb(four, five, six)) => {
+                i32::from(one).abs_diff(i32::from(four))
+                    + i32::from(two).abs_diff(i32::from(five))
+                    + i32::from(three).abs_diff(i32::from(six))
+            }
+            _ => unreachable!("both palettes are true colour"),
+        };
+        assert!(
+            distance(receded, palette.background) < distance(receded, palette.foreground),
+            "the text is still nearer its own colour than the surface"
+        );
+
+        // The bands survive, or the page dissolves rather than recedes and dismissing reads as arriving
+        // somewhere new.
+        assert_eq!(
+            buffer[(0, 1)].bg,
+            palette.selection,
+            "the selected row lost its band"
+        );
+        assert_eq!(buffer[(0, 0)].bg, palette.background);
+    }
+
+    #[test]
+    fn a_scrim_leaves_a_colour_it_cannot_measure_alone() {
+        // A named ANSI colour is whatever the terminal says it is, so blending it means inventing its value
+        // first — and a scrim is not worth guessing for.
+        let palette = Mode::Dark.palette();
+        let mut buffer = buffer(2, 1);
+        let area = Rect::new(0, 0, 2, 1);
+        buffer.set_style(area, Style::new().bg(palette.background).fg(Color::Yellow));
+        scrim(&mut buffer, area, palette);
+        assert_eq!(buffer[(0, 0)].fg, Color::Yellow);
+    }
+
+    #[test]
+    fn a_scrim_only_touches_what_it_was_given() {
+        let palette = Mode::Dark.palette();
+        let mut buffer = buffer(6, 3);
+        let whole = buffer.area;
+        buffer.set_style(
+            whole,
+            Style::new().bg(palette.background).fg(palette.foreground),
+        );
+        scrim(&mut buffer, Rect::new(0, 0, 6, 2), palette);
+        assert_eq!(
+            buffer[(0, 2)].fg,
+            palette.foreground,
+            "it dimmed a row outside the area it was handed"
+        );
     }
 
     #[test]
