@@ -45,6 +45,12 @@ any provenance change.
 
 - **A new component declares its provenance in the same commit.** The completeness test fails otherwise,
   and a component whose lineage nobody wrote down is one nobody can audit later.
+- **A component that needs a dependency of its own is a feature.** `theme`, `overlay`, `inspect` and
+  `provenance` cost only ratatui and the registry and are always compiled in; `background` and
+  `document-tree` gate their own dependency behind `dep:`. The reason is unification, not binary size:
+  `serde_json`'s `preserve_order` reaches every consumer that shares the graph, so enabling it for a
+  consumer who wanted a different component changes JSON ordering in code that never asked. CI compiles
+  each feature alone from the manifest's own list, so a component that silently needs a sibling fails.
 - **`Inspired` is not a fork.** Use it for a rewrite, and name what it was learned from — the credit is
   the whole obligation, and an empty one is the way to get it wrong while looking right.
 - **Never widen the `deny.toml` licence allowlist to make a dependency fit.** Copyleft is absent on

@@ -39,6 +39,26 @@ the version it claims; a tracked fork's vendored tree, additions log **and upstr
 because attribution travels with vendored code; an inspired component names what it learned from; and
 nothing claims a version this crate has not reached.
 
+## You compile the components you take
+
+`theme`, `overlay`, `inspect` and `provenance` need only ratatui, so they are always there. The two that
+carry a dependency of their own are features, on by default and free to turn off:
+
+```toml
+tuilith = { version = "0.1", default-features = false }   # the four above, and nothing else
+tuilith = { version = "0.1", features = ["document-tree"] }
+```
+
+| Feature | Component | What it pulls |
+|---|---|---|
+| `background` | terminal background detection | `terminal-colorsaurus` |
+| `document-tree` | a JSON document as a foldable tree | `serde_json` with `preserve_order` |
+| `os-appearance` | the desktop's light/dark setting (implies `background`) | — |
+
+`preserve_order` is the reason this is a feature rather than a size optimisation: cargo unifies features
+across a dependency graph, so a consumer who wanted only `inspect` would otherwise find their own
+`serde_json` reordering maps.
+
 ## The dependency set is audited, not just pinned
 
 Every dependency delta — the diff from the version we had to the version we take — has to have been

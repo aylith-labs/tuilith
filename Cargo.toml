@@ -21,12 +21,28 @@ categories = ["command-line-interface"]
 include = ["src/**", "README.md", "PROVENANCE.md", "LICENSE-*", "CHANGELOG.md"]
 
 [features]
-default = ["os-appearance"]
+default = ["background", "document-tree", "os-appearance"]
+
+# A component that needs a dependency of its own is a feature, so taking one component does not compile
+# the others' dependency trees. `theme`, `overlay`, `inspect` and `provenance` need only ratatui and the
+# registry, so they are always present and have no feature of their own.
+
+# Terminal background detection. Pulls `terminal-colorsaurus` for the OSC query.
+background = ["dep:terminal-colorsaurus"]
+# A JSON document as a foldable tree. Pulls `serde_json`, and with it `preserve_order` — which is a
+# feature a consumer inherits through unification, so it is not something to enable for everybody.
+document-tree = ["dep:serde_json"]
 # Reading the desktop's light/dark setting means running `reg.exe` under WSL and `defaults` on macOS.
 # Those are the signals that answer where the terminal itself does not, so they are on by default — but
 # a library spawning processes is a fair thing to refuse, and refusing costs only those two signals:
 # the OSC query and `COLORFGBG` still work, and `Source` says when nothing answered.
-os-appearance = []
+os-appearance = ["background"]
+
+# The example drives the component it is named after, so it only exists when that component does.
+# Without this it is compiled under every feature selection and fails the no-default-features gate.
+[[example]]
+name = "background"
+required-features = ["background"]
 
 [lints.rust]
 missing_docs = "warn"
@@ -50,8 +66,8 @@ crossterm = "0.29.0"
 # The distributed registry behind the provenance catalog: a component declares its own lineage next to
 # itself, and nothing keeps a second list that could disagree.
 inventory = "0.3.24"
-serde_json = { version = "1.0.151", features = ["preserve_order"] }
-terminal-colorsaurus = "1.0.3"
+serde_json = { version = "1.0", features = ["preserve_order"], optional = true }
+terminal-colorsaurus = { version = "1.0", optional = true }
 
 [dev-dependencies]
 insta = "1.48.0"

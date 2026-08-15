@@ -19,6 +19,13 @@ fn manifest() -> String {
 /// Renders the catalogue to `PROVENANCE.md`. CI runs this and then fails on any diff, so the published
 /// record cannot drift from what the components declare.
 #[test]
+// Rendering under a feature subset writes a record missing whatever was compiled out, and the diff
+// check downstream would then be judging a truncated file against the full one. The complete set is
+// the only valid input, so the test declines rather than producing a plausible wrong answer.
+#[cfg_attr(
+    not(all(feature = "background", feature = "document-tree")),
+    ignore = "the record is only complete when every component is compiled in"
+)]
 fn render_the_provenance_record() {
     let path = root().join("PROVENANCE.md");
     let rendered = provenance::render();

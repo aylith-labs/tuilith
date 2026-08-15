@@ -138,7 +138,12 @@ impl Mode {
     /// This discards *which* signal answered. Use [`crate::background::read`] where that matters, which
     /// is anywhere the answer is shown to a person: a mode nobody observed is a guess, and a guess that
     /// cannot be told apart from an observation is one nobody will ever question.
+    ///
+    /// Needs the `background` feature, which is what supplies the signals. Without it there is nothing
+    /// to detect from, and a `detect` that always answered `Dark` would be a guess wearing the name of
+    /// an observation — the exact confusion the paragraph above exists to prevent.
     #[must_use]
+    #[cfg(feature = "background")]
     pub fn detect() -> Self {
         crate::background::read().mode
     }

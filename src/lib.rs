@@ -17,13 +17,16 @@
 //! [`Inspired`]: provenance::Lineage::Inspired
 //! [`Original`]: provenance::Lineage::Original
 
+#[cfg(feature = "background")]
 pub mod background;
+#[cfg(feature = "document-tree")]
 pub mod document_tree;
 pub mod inspect;
 pub mod overlay;
 pub mod provenance;
 pub mod theme;
 
+#[cfg(feature = "background")]
 pub use background::{Reading, Source};
 pub use overlay::Overlay;
 pub use provenance::{Lineage, Origin, Provenance};

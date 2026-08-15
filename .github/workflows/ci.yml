@@ -26,13 +26,25 @@ jobs:
       - run: cargo test --workspace
       - run: cargo build --workspace --release
 
-      # Every feature this crate offers to turn off has to still compile with it off. A feature is only
-      # an escape hatch if the build someone gets by taking it is clean — and `cargo test` would not say
-      # so, because it does not deny warnings, so the check has to be clippy's.
+      # Every feature this crate offers to turn off has to still compile with it off, and each one has
+      # to compile on its own — a component that only builds because a sibling's feature happened to be
+      # on is not optional, it is undeclared coupling. The list is read from the manifest rather than
+      # written here, so adding a feature cannot quietly escape the check. A feature is only an escape
+      # hatch if the build someone gets by taking it is clean, and `cargo test` would not say so
+      # because it does not deny warnings, so the check has to be clippy's.
       - name: the optional features are optional
         run: |
+          set -euo pipefail
           cargo clippy --workspace --all-targets --no-default-features -- -D warnings
           cargo test --workspace --no-default-features
+          features=$(cargo metadata --no-deps --format-version 1 |
+            python3 -c 'import json,sys; print(" ".join(json.load(sys.stdin)["packages"][0]["features"]))')
+          for feature in $features; do
+            [ "$feature" = default ] && continue
+            echo "::group::only $feature"
+            cargo clippy --workspace --all-targets --no-default-features --features "$feature" -- -D warnings
+            echo "::endgroup::"
+          done
 
       # The other promise in the manifest: a caret requirement says a consumer already holding that
       # version can take this crate, and resolution never tests it — it always picks the newest match.
