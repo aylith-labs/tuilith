@@ -11,7 +11,7 @@
 ## Project Overview
 
 A curated, audited component library for [ratatui](https://ratatui.rs) terminal UIs, consumed by the
-lab's Rust CLIs (`a private repo`, `polygit`) and published to crates.io. Rust 2024, `ratatui` 0.30,
+lab's Rust CLIs and published to crates.io. Rust 2024, `ratatui` 0.30,
 `crossterm` 0.29. Two things distinguish it from a widget bag: every component declares its provenance
 and the registry renders a diff-checked record from those declarations, and every dependency *delta* is
 certified with `cargo vet` before it can land.
@@ -51,6 +51,12 @@ any provenance change.
   `serde_json`'s `preserve_order` reaches every consumer that shares the graph, so enabling it for a
   consumer who wanted a different component changes JSON ordering in code that never asked. CI compiles
   each feature alone from the manifest's own list, so a component that silently needs a sibling fails.
+- **This repository is PUBLIC. Nothing that names a private repository, a private product, or an
+  employer's internals may land in it** — not in source, not in a test fixture, not in `PROVENANCE.md`,
+  which is generated *and* shipped inside the crate via the `include` list. Use `Origin::Private` for
+  a component moved from a private repository: the lineage is what the record owes a reader, and the
+  name is something they cannot look up anyway. Fixtures are synthetic — a captured response carries
+  the field names and identifiers of wherever it was captured.
 - **`Inspired` is not a fork.** Use it for a rewrite, and name what it was learned from — the credit is
   the whole obligation, and an empty one is the way to get it wrong while looking right.
 - **Never widen the `deny.toml` licence allowlist to make a dependency fit.** Copyleft is absent on

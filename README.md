@@ -28,7 +28,7 @@ A component declares this beside itself:
 tuilith::provenance! {
     component: "document_tree",
     about: "A JSON document as a tree you can fold",
-    origin: Origin::Repo("a private repo"),
+    origin: Origin::Private,
     lineage: Lineage::Inspired { by: "polygit's settings preview" },
     since: "0.1",
 }

@@ -14,7 +14,7 @@ use ratatui::style::Color;
 crate::provenance! {
     component: "theme",
     about: "Nine semantic colour roles as a light and dark pair, with terminal background detection",
-    origin: crate::Origin::Repo("a private repo"),
+    origin: crate::Origin::Private,
     lineage: crate::Lineage::Original,
     since: "0.1",
 }

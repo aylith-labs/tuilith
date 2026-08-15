@@ -86,6 +86,12 @@ pub enum Origin {
     Here,
     /// Written in another of our repositories and moved here.
     Repo(&'static str),
+    /// Written in a private repository of ours and moved here.
+    ///
+    /// Deliberately unnamed. This crate is public, so a private repository's name is something a
+    /// reader cannot look up and the author may not want published; what the record owes them is the
+    /// lineage — that this is ours, moved rather than written here — and that survives without it.
+    Private,
     /// Someone else's crate.
     Upstream(&'static str),
 }
@@ -94,6 +100,7 @@ impl fmt::Display for Origin {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Here => formatter.write_str("tuilith"),
+            Self::Private => formatter.write_str("a private repository of ours"),
             Self::Repo(name) | Self::Upstream(name) => formatter.write_str(name),
         }
     }

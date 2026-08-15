@@ -21,7 +21,7 @@ use crate::theme::Palette;
 crate::provenance! {
     component: "document_tree",
     about: "A JSON document as a tree you can fold, with per-node counts and folds held by path",
-    origin: crate::Origin::Repo("a private repo"),
+    origin: crate::Origin::Private,
     lineage: crate::Lineage::Inspired { by: "polygit's settings preview" },
     since: "0.1",
 }
@@ -404,6 +404,9 @@ mod tests {
 
     use super::*;
 
+    /// Synthetic, and deliberately so: the shape is what the tests need — two levels of nesting under
+    /// a numeric key, an array of strings, a null leaf and a boolean — and a captured response from
+    /// somewhere real would put that somewhere's field names and identifiers in a public repository.
     fn document() -> Value {
         json!({
             "success": true,
@@ -481,8 +484,11 @@ mod tests {
         tree.toggle_path("result.10000000000001.20000000000002");
         let drawn = labels(&tree);
         assert!(drawn.contains(&"      ▸ 0 {3}".to_owned()), "{drawn:?}");
-        // The room itself is still folded: nothing opens that was not asked for.
-        assert!(!drawn.iter().any(|row| row.contains("alpha(1)")), "{drawn:?}");
+        // The leaf itself is still folded: nothing opens that was not asked for.
+        assert!(
+            !drawn.iter().any(|row| row.contains("alpha(1)")),
+            "{drawn:?}"
+        );
     }
 
     #[test]
