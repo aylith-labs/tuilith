@@ -59,15 +59,18 @@ cast_possible_truncation = "allow"
 cast_lossless = "allow"
 
 [dependencies]
-# The minor, not the patch it happened to be written against: a requirement is a promise about
-# what a consumer can already be holding, and `scripts/pin-declared-floors.py` builds against it.
+# A requirement is a promise about what a consumer can already be holding, and
+# `scripts/pin-declared-floors.py` builds against exactly the version each one names as its lowest.
+# So widen only as far as something has actually been built: 0.30 is the minor because 0.30.0 was
+# tested, while serde_json and terminal-colorsaurus keep their patch — widening those to the bare
+# minor declared 1.0.0, which is a decade below anything that compiles here.
 ratatui = "0.30"
 crossterm = "0.29.0"
 # The distributed registry behind the provenance catalog: a component declares its own lineage next to
 # itself, and nothing keeps a second list that could disagree.
 inventory = "0.3.24"
-serde_json = { version = "1.0", features = ["preserve_order"], optional = true }
-terminal-colorsaurus = { version = "1.0", optional = true }
+serde_json = { version = "1.0.151", features = ["preserve_order"], optional = true }
+terminal-colorsaurus = { version = "1.0.3", optional = true }
 
 [dev-dependencies]
 insta = "1.48.0"
