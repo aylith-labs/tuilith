@@ -43,7 +43,9 @@ cast_possible_truncation = "allow"
 cast_lossless = "allow"
 
 [dependencies]
-ratatui = "0.30.2"
+# The minor, not the patch it happened to be written against: a requirement is a promise about
+# what a consumer can already be holding, and `scripts/pin-declared-floors.py` builds against it.
+ratatui = "0.30"
 crossterm = "0.29.0"
 # The distributed registry behind the provenance catalog: a component declares its own lineage next to
 # itself, and nothing keeps a second list that could disagree.

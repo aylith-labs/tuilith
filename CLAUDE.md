@@ -49,6 +49,10 @@ any provenance change.
   the whole obligation, and an empty one is the way to get it wrong while looking right.
 - **Never widen the `deny.toml` licence allowlist to make a dependency fit.** Copyleft is absent on
   purpose; a crate offering only copyleft is a conversation, not a config edit.
+- **A dependency requirement names the floor a consumer can hold, not the version it was written
+  against.** Widen it to the lowest that actually compiles — CI pins every direct dependency to its
+  declared floor and runs the gates there, so an over-declared requirement fails rather than
+  quietly refusing a consumer. Same reasoning as `rust-version`, which is checked the same way.
 - **Never certify a delta you have not read**, and prefer `cargo vet trust` only where the imported
   peers already trust that publisher. Trust entries carry a one-year expiry and are never recorded for a
   crate with multiple publishers.
