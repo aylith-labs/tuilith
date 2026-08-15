@@ -6,7 +6,11 @@ resolver = "3"
 name = "tuilith"
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.97"
+# The tested floor, not the theoretical one. `rust-toolchain.toml` pins a newer channel to build with,
+# but nothing here needs it: `cargo +1.96.1 check --all-features --all-targets` passes. A consumer
+# pinned to 1.96 — shefrd is — is refused by the declaration alone, never by the code, so the number
+# has to be a measurement. CI holds it to that; raise it only when something actually needs to.
+rust-version = "1.96"
 description = "Audited terminal-UI components for ratatui, each carrying where it came from"
 repository = "https://github.com/aylith-labs/tuilith"
 license = "MIT OR Apache-2.0"

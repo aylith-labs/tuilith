@@ -34,6 +34,16 @@ jobs:
           cargo clippy --workspace --all-targets --no-default-features -- -D warnings
           cargo test --workspace --no-default-features
 
+      # The declared MSRV is a promise to consumers pinned below the channel this repo builds with, and
+      # nothing else in this job would notice it breaking — every other step runs the newer toolchain.
+      - name: the declared MSRV still compiles
+        run: |
+          set -euo pipefail
+          msrv=$(cargo metadata --no-deps --format-version 1 |
+            python3 -c 'import json,sys; print(json.load(sys.stdin)["packages"][0]["rust_version"])')
+          rustup toolchain install "$msrv" --profile minimal --no-self-update
+          cargo "+$msrv" check --workspace --all-features --all-targets --locked
+
       # The published record has to match what the components declare. Rendered from the registry and
       # diff-checked here, so it cannot claim a lineage the code no longer has.
       - name: PROVENANCE.md is current
