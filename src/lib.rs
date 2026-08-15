@@ -30,4 +30,4 @@ pub mod theme;
 pub use background::{Reading, Source};
 pub use overlay::Overlay;
 pub use provenance::{Lineage, Origin, Provenance};
-pub use theme::{Mode, DEFAULT_DARK, DEFAULT_LIGHT, Palette};
+pub use theme::{DEFAULT_DARK, DEFAULT_LIGHT, Mode, Palette};

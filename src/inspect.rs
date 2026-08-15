@@ -352,7 +352,7 @@ fn contrast(one: f64, other: f64) -> f64 {
 mod tests {
     use super::*;
     use crate::overlay::Overlay;
-    use crate::theme::{Mode, DEFAULT_DARK, DEFAULT_LIGHT};
+    use crate::theme::{DEFAULT_DARK, DEFAULT_LIGHT, Mode};
 
     fn buffer(width: u16, height: u16) -> Buffer {
         Buffer::empty(Rect::new(0, 0, width, height))
@@ -449,7 +449,8 @@ mod tests {
         // A role that is not a saturation point, so this test is about the glyph rather than about the
         // carve-out above it.
         buffer[(1, 0)].set_fg(DEFAULT_LIGHT.accent);
-        no_leak(&buffer, area, DEFAULT_LIGHT).expect("a blank cell's glyph colour is not on screen");
+        no_leak(&buffer, area, DEFAULT_LIGHT)
+            .expect("a blank cell's glyph colour is not on screen");
 
         buffer[(1, 0)].set_symbol("x");
         let leak = no_leak(&buffer, area, DEFAULT_LIGHT)
