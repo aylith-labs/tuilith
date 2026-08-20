@@ -24,10 +24,12 @@ pub mod document_tree;
 pub mod inspect;
 pub mod overlay;
 pub mod provenance;
+pub mod scroll;
 pub mod theme;
 
 #[cfg(feature = "background")]
 pub use background::{Reading, Source};
 pub use overlay::Overlay;
 pub use provenance::{Lineage, Origin, Provenance};
+pub use scroll::Axis;
 pub use theme::{DEFAULT_DARK, DEFAULT_LIGHT, Mode, Palette};

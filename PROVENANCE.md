@@ -15,4 +15,5 @@ anyone else's code; the Origin column says which of our repositories it was firs
 | `document_tree` | inspired | a private repository of ours | after polygit's settings preview | 0.1 | A JSON document as a tree you can fold, with per-node counts and folds held by path |
 | `inspect` | original | tuilith | — | 0.1 | Painted, readable and right-variant assertions over a rendered buffer |
 | `overlay` | original | tuilith | — | 0.1 | A floating surface that clears and repaints from the theme, so it cannot come out unpainted |
+| `scroll` | original | polygit | — | 0.1 | A scrollbar whose track is carved out of the area, so it cannot be drawn over the text |
 | `theme` | original | a private repository of ours | — | 0.1 | Nine semantic colour roles as a light and dark pair, with terminal background detection |
