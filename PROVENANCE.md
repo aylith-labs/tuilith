@@ -18,4 +18,5 @@ anyone else's code; the Origin column says which of our repositories it was firs
 | `overlay` | original | tuilith | — | 0.1 | A floating surface that clears and repaints from the theme, so it cannot come out unpainted |
 | `pick` | inspired | tuilith | after fzf's positional bonus scoring | 0.1 | A typeahead filter that scores by subsequence and says where each match landed |
 | `scroll` | original | polygit | — | 0.1 | A scrollbar whose track is carved out of the area, so it cannot be drawn over the text |
+| `tabs` | original | a private repository of ours | — | 0.1 | A tab strip that returns the column range each tab landed on, so a click cannot drift from the paint |
 | `theme` | original | a private repository of ours | — | 0.1 | Nine semantic colour roles as a light and dark pair, with terminal background detection |

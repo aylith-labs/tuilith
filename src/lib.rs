@@ -27,6 +27,7 @@ pub mod overlay;
 pub mod pick;
 pub mod provenance;
 pub mod scroll;
+pub mod tabs;
 pub mod theme;
 
 #[cfg(feature = "background")]
