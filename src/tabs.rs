@@ -17,7 +17,7 @@
 //! let strip = tabs::strip(
 //!     &[tabs::Tab::new("features").badge(17), tabs::Tab::new("plugins").badge(4)],
 //!     active,
-//!     palette,
+//!     &tabs::Styles::from_palette(palette),
 //! );
 //! frame.render_widget(Paragraph::new(strip.line()), area);
 //! let _picked = strip.at(clicked.saturating_sub(area.x));
@@ -74,6 +74,33 @@ impl<'a> Tab<'a> {
     }
 }
 
+/// How the two states are drawn.
+///
+/// Taken rather than derived, because a caller whose accent varies by theme computes its own
+/// contrasting foreground and cannot express that as a palette role. [`Styles::from_palette`] is the
+/// answer for everyone else, and is what the palette would have produced anyway.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Styles {
+    /// The tab the reader is on.
+    pub active: Style,
+    /// Every other tab.
+    pub inactive: Style,
+}
+
+impl Styles {
+    /// The accent as a band behind the active tab, everything else in the dim role.
+    #[must_use]
+    pub fn from_palette(palette: &Palette) -> Self {
+        Self {
+            active: Style::default()
+                .fg(palette.background)
+                .bg(palette.accent)
+                .add_modifier(Modifier::BOLD),
+            inactive: Style::default().fg(palette.dim),
+        }
+    }
+}
+
 /// A laid-out strip: the spans that draw it, and where each tab landed.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Strip {
@@ -117,12 +144,12 @@ impl Strip {
     }
 }
 
-/// Lay out a strip and style it from the palette.
+/// Lay out a strip.
 ///
 /// `active` past the end simply styles nothing as active, which is what a caller with an empty list
 /// or a stale index should get — a panic here would turn a cosmetic bug into a crash.
 #[must_use]
-pub fn strip(tabs: &[Tab<'_>], active: usize, palette: &Palette) -> Strip {
+pub fn strip(tabs: &[Tab<'_>], active: usize, styles: &Styles) -> Strip {
     let mut spans = Vec::with_capacity(tabs.len() * 3);
     let mut ranges = Vec::with_capacity(tabs.len());
     let mut cursor = 0u16;
@@ -134,14 +161,10 @@ pub fn strip(tabs: &[Tab<'_>], active: usize, palette: &Palette) -> Strip {
             spans.push(separator);
         }
 
-        let is_active = index == active;
-        let label_style = if is_active {
-            Style::default()
-                .fg(palette.background)
-                .bg(palette.accent)
-                .add_modifier(Modifier::BOLD)
+        let label_style = if index == active {
+            styles.active
         } else {
-            Style::default().fg(palette.dim)
+            styles.inactive
         };
 
         let start = cursor;
@@ -175,6 +198,10 @@ mod tests {
         crate::theme::DEFAULT_DARK
     }
 
+    fn styles() -> Styles {
+        Styles::from_palette(&palette())
+    }
+
     /// Where the strip says a tab is, is where the terminal drew it.
     ///
     /// The claim every other method rests on, and the one a second derivation gets wrong. Read off a
@@ -184,7 +211,7 @@ mod tests {
     fn every_reported_range_is_where_the_tab_was_painted() {
         let tabs = [Tab::new("features").badge(17), Tab::new("plugins").badge(4)];
         for active in 0..tabs.len() {
-            let strip = strip(&tabs, active, &palette());
+            let strip = strip(&tabs, active, &styles());
             let area = Rect::new(0, 0, strip.width().max(1), 1);
             let mut terminal = Terminal::new(TestBackend::new(area.width, 1)).expect("backend");
             terminal
@@ -219,7 +246,7 @@ mod tests {
     #[test]
     fn a_column_hit_tests_to_the_tab_drawn_on_it() {
         let tabs = [Tab::new("one"), Tab::new("two"), Tab::new("three")];
-        let strip = strip(&tabs, 0, &palette());
+        let strip = strip(&tabs, 0, &styles());
 
         for index in 0..tabs.len() {
             let range = strip.range(index).expect("a range per tab");
@@ -240,7 +267,7 @@ mod tests {
     #[test]
     fn a_wide_label_does_not_shift_the_tabs_after_it() {
         let tabs = [Tab::new("設定"), Tab::new("plain")];
-        let strip = strip(&tabs, 0, &palette());
+        let strip = strip(&tabs, 0, &styles());
         let area = Rect::new(0, 0, strip.width(), 1);
         let mut terminal = Terminal::new(TestBackend::new(area.width, 1)).expect("backend");
         terminal
@@ -266,8 +293,8 @@ mod tests {
     /// A badge widens the tab it belongs to, and a tab without one is narrower by exactly its width.
     #[test]
     fn a_badge_belongs_to_its_own_tab() {
-        let bare = strip(&[Tab::new("all")], 0, &palette());
-        let badged = strip(&[Tab::new("all").badge(69)], 0, &palette());
+        let bare = strip(&[Tab::new("all")], 0, &styles());
+        let badged = strip(&[Tab::new("all").badge(69)], 0, &styles());
         assert_eq!(
             badged.width() - bare.width(),
             3,
@@ -284,7 +311,7 @@ mod tests {
     #[test]
     fn an_active_index_past_the_end_is_drawn_as_no_tab_active() {
         let tabs = [Tab::new("one"), Tab::new("two")];
-        let strip = strip(&tabs, 9, &palette());
+        let strip = strip(&tabs, 9, &styles());
         assert_eq!(strip.range(0).expect("still laid out").start, 0);
         assert!(
             strip
@@ -296,7 +323,7 @@ mod tests {
 
     #[test]
     fn an_empty_strip_draws_nothing_and_hit_tests_to_nothing() {
-        let strip = strip(&[], 0, &palette());
+        let strip = strip(&[], 0, &styles());
         assert_eq!(strip.width(), 0);
         assert_eq!(strip.at(0), None);
         assert!(strip.spans().is_empty());
