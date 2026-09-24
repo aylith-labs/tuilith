@@ -1,19 +1,20 @@
 # tuilith
 
-Terminal-UI components for [ratatui](https://ratatui.rs), curated and audited, each carrying where it
-came from.
+Reusable terminal-UI components for [ratatui](https://ratatui.rs), with declared provenance and
+dependency checks configured in CI.
 
 ```toml
 [dependencies]
-tuilith = "0.1"
+tuilith = { git = "https://github.com/aylith-labs/tuilith", default-features = false }
 ```
 
 Two things make this more than a bag of widgets.
 
 ## Every component says what it owes upstream
 
-The [provenance record](PROVENANCE.md) is generated from the components themselves, so it cannot claim a
-lineage the code no longer has. Four kinds, and the difference matters to anyone depending on them:
+The [provenance record](PROVENANCE.md) is generated from component declarations and checked for drift
+in CI. It records the stated lineage; the checks do not establish an independent code audit. Four
+lineage kinds are supported:
 
 | Kind | What it is | Can it take upstream's fixes? |
 |---|---|---|
@@ -34,19 +35,18 @@ tuilith::provenance! {
 }
 ```
 
-and five tests hold it to it: no component declared twice; a wrapper's crate is really a dependency at
-the version it claims; a tracked fork's vendored tree, additions log **and upstream licence** all exist,
-because attribution travels with vendored code; an inspired component names what it learned from; and
-nothing claims a version this crate has not reached.
+Five checks cover duplicate declarations, a wrapper's stated dependency requirement, a tracked
+fork's vendored tree and licence files, an inspired component's named source, and version claims.
+These are structural checks on the declarations and repository files.
 
 ## You compile the components you take
 
-`theme`, `overlay`, `inspect` and `provenance` need only ratatui, so they are always there. The two that
-carry a dependency of their own are features, on by default and free to turn off:
+`float`, `inspect`, `overlay`, `pick`, `provenance`, `scroll`, `tabs` and `theme` are always available.
+Background detection and the JSON document tree are feature-gated because they add dependencies:
 
 ```toml
-tuilith = { version = "0.1", default-features = false }   # the four above, and nothing else
-tuilith = { version = "0.1", features = ["document-tree"] }
+tuilith = { git = "https://github.com/aylith-labs/tuilith", default-features = false }
+tuilith = { git = "https://github.com/aylith-labs/tuilith", default-features = false, features = ["document-tree"] }
 ```
 
 | Feature | Component | What it pulls |
@@ -59,28 +59,25 @@ tuilith = { version = "0.1", features = ["document-tree"] }
 across a dependency graph, so a consumer who wanted only `inspect` would otherwise find their own
 `serde_json` reordering maps.
 
-## The dependency set is audited, not just pinned
+## Dependency checks and their limits
 
-Every dependency delta — the diff from the version we had to the version we take — has to have been
-reviewed by someone we trust before it can land. That is [`cargo vet`](https://mozilla.github.io/cargo-vet/),
-and it is a required check.
+CI runs [`cargo vet`](https://mozilla.github.io/cargo-vet/) against the repository's audits,
+imported audit sets, publisher trust entries and exemptions. It also runs `cargo deny` against the
+configured licence, advisory, ban and source policies. Passing those checks is not a claim that
+every dependency or component has been independently audited.
 
-Where the graph stands: **63 crates fully audited, 130 grandfathered as exemptions** at the start,
-against imported audit sets from Mozilla, Google, the Bytecode Alliance, Embark, ISRG and Zcash. The
-exemptions are the honest backlog — `cargo vet suggest` ranks them by how little there is to read, and
-the weekly job shrinks them.
+The current `supply-chain/config.toml` has **130 exemption entries**. Exemptions are an explicit
+review backlog, not evidence of completed reviews. `cargo vet suggest` can help prioritize that work.
 
-Publisher trust is recorded where the peers already trust someone (`dtolnay`, `cuviper`), with a
-one-year expiry, and never for a crate several people can publish — trusting one person does not cover
-who else holds the keys.
+Publisher trust entries are recorded in `supply-chain/audits.toml`; they are another basis on which
+`cargo vet` can accept a dependency without a local review of each version.
 
-`cargo deny` enforces a licence allowlist built from what is actually in the graph, with copyleft
-deliberately absent: several crates offer it as one arm of an `OR`, so omitting it means we take the
-permissive arm, and a crate offering *only* copyleft fails the check rather than resolving silently
-during someone's bump.
+`deny.toml` has a permissive licence allowlist and omits copyleft licences. The CI check evaluates
+the resolved dependency graph against that policy.
 
-Weekly, a scheduled job takes the latest of everything and opens a PR carrying the diffs and the
-uncertified deltas. It cannot merge until they are certified.
+A scheduled workflow attempts weekly dependency updates and opens a PR with the version diffs and
+`cargo vet suggest` output. The presence of that workflow does not establish that updates were
+reviewed or merged.
 
 ## Licence
 

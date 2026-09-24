@@ -11,7 +11,7 @@ edition = "2024"
 # pinned to 1.96 — shefrd is — is refused by the declaration alone, never by the code, so the number
 # has to be a measurement. CI holds it to that; raise it only when something actually needs to.
 rust-version = "1.96"
-description = "Audited terminal-UI components for ratatui, each carrying where it came from"
+description = "Reusable ratatui components with declared provenance and CI dependency checks"
 repository = "https://github.com/aylith-labs/tuilith"
 license = "MIT OR Apache-2.0"
 keywords = ["ratatui", "tui", "terminal", "widgets", "supply-chain"]

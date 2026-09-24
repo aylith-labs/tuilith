@@ -1,16 +1,17 @@
-//! Terminal-UI components for [ratatui], curated and audited, each carrying where it came from.
+//! Reusable terminal-UI components for [ratatui], with declared provenance.
 //!
-//! Two things distinguish this from a bag of widgets:
+//! The library records where each component is stated to come from and configures dependency checks
+//! in CI.
 //!
-//! **Every component declares its provenance.** A [`Wrapper`] is upstream's code re-exported, so its
-//! API moves when upstream's does. A [`Tracked`] fork is upstream's code vendored at a revision with
-//! our additions logged, so upstream's later fixes can still be taken. [`Inspired`] is our own
-//! implementation of an idea seen elsewhere, sharing no code with it. [`Original`] was first written
-//! here. The record is derived from the components themselves and published as `PROVENANCE.md`.
+//! **Every component declares its provenance.** A [`Wrapper`] denotes upstream code re-exported.
+//! A [`Tracked`] fork denotes code vendored at a revision with additions logged. [`Inspired`] denotes
+//! an independent implementation crediting an earlier idea. [`Original`] denotes code first written
+//! in one of our repositories. The record is generated from those declarations as `PROVENANCE.md`;
+//! its structural checks do not independently verify the code's lineage.
 //!
-//! **The dependency set is audited, not just pinned.** `cargo vet` certifies the *delta* between the
-//! versions we had and the versions we take, weekly, so an upgrade is a reviewed change rather than a
-//! version bump nobody read.
+//! **Dependency checks have limits.** CI runs `cargo vet` against audits, imported audit sets,
+//! publisher trust and exemptions, and runs `cargo deny` against repository policy. Exemptions remain
+//! a review backlog; these gates do not establish that every dependency has been audited.
 //!
 //! [`Wrapper`]: provenance::Lineage::Wrapper
 //! [`Tracked`]: provenance::Lineage::Tracked
