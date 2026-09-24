@@ -431,8 +431,8 @@ pub fn query_line(
     // Only once a query has actually dropped something: "7 of 7" is noise.
     if !filter.query().is_empty() && filter.hits().len() != filter.measured() {
         let count = format!("{} of {}", filter.hits().len(), filter.measured());
-        let used: usize = spans.iter().map(|span| span.content.chars().count()).sum();
-        let pad = (width as usize).saturating_sub(used + count.chars().count() + 1);
+        let used: usize = spans.iter().map(Span::width).sum();
+        let pad = (width as usize).saturating_sub(used + Span::raw(&count).width());
         spans.push(Span::raw(" ".repeat(pad)));
         spans.push(Span::styled(count, Style::default().fg(palette.dim)));
     }
