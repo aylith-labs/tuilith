@@ -1,8 +1,8 @@
-//! The checks that make a provenance claim mean something.
+//! Structural checks on declared provenance.
 //!
-//! A record nothing verifies is a comment. These read the registry against the repository — the
-//! manifest, the vendored trees, the licence files — so a claim that has stopped being true fails
-//! here rather than misleading someone who reads it.
+//! These compare the registry with repository metadata and files: the manifest, vendored trees and
+//! licence files. They detect missing evidence and declaration drift, not whether a claimed origin
+//! matches upstream code independently.
 
 use std::path::{Path, PathBuf};
 

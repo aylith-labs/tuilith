@@ -157,8 +157,8 @@ macro_rules! provenance {
 
 /// The catalogue as Markdown, which `PROVENANCE.md` is checked against.
 ///
-/// Rendered from the registry rather than written by hand, and diff-checked in CI, so the published
-/// record cannot claim a lineage the code no longer has.
+/// Rendered from the registry rather than written by hand, and diff-checked in CI, so the record
+/// matches the declarations. This does not independently verify a declaration's upstream lineage.
 #[must_use]
 pub fn render() -> String {
     let mut out = String::from(

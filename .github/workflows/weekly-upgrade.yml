@@ -1,8 +1,8 @@
-# The weekly audited upgrade.
+# The scheduled dependency upgrade proposal.
 #
 # Takes the latest of everything, then opens a PR carrying the *diffs* — not a version list. The PR
-# cannot merge until each new delta is certified, because `cargo vet` is a required check and it fails
-# on anything nobody has reviewed. That is the whole design: an upgrade is a reviewed change.
+# cannot merge until configured CI checks pass. Cargo vet may accept audits, imported sets, publisher
+# trust or existing exemptions, so a passing check alone does not prove fresh human review of the PR.
 name: Weekly upgrade
 
 on:

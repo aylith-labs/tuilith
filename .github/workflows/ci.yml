@@ -66,8 +66,8 @@ jobs:
           rustup toolchain install "$msrv" --profile minimal --no-self-update
           cargo "+$msrv" check --workspace --all-features --all-targets --locked
 
-      # The published record has to match what the components declare. Rendered from the registry and
-      # diff-checked here, so it cannot claim a lineage the code no longer has.
+      # The record must match what components declare. This checks drift between declarations and
+      # generated Markdown, not whether a declaration independently matches upstream code.
       - name: PROVENANCE.md is current
         run: |
           cargo test --workspace render_the_provenance_record
@@ -89,8 +89,8 @@ jobs:
         with:
           tool: cargo-vet@0.10.2,cargo-deny@0.20.2
 
-      # Every dependency delta we take has to have been reviewed by someone we trust — us, or one of
-      # the audit sets we import. An uncertified delta fails here, which is the whole point.
+      # Evaluate the resolved graph against audits, imported sets, publisher trust and exemptions.
+      # A passing check is not evidence that every delta received a fresh local review.
       - run: cargo vet --locked
 
       # Licences against the allowlist, RUSTSEC advisories, banned crates, and sources other than

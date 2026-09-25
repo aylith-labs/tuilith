@@ -10,11 +10,11 @@
 
 ## Project Overview
 
-A curated, audited component library for [ratatui](https://ratatui.rs) terminal UIs, consumed by the
-lab's Rust CLIs and published to crates.io. Rust 2024, `ratatui` 0.30,
-`crossterm` 0.29. Two things distinguish it from a widget bag: every component declares its provenance
-and the registry renders a diff-checked record from those declarations, and every dependency *delta* is
-certified with `cargo vet` before it can land.
+A reusable component library for [ratatui](https://ratatui.rs) terminal UIs, consumed by the
+lab's Rust CLIs. A crates.io publication has not been verified. Rust 2024, `ratatui` 0.30,
+`crossterm` 0.29. Every component declares its stated provenance and the registry renders a
+diff-checked record from those declarations. CI runs dependency checks with `cargo vet` and
+`cargo deny`; exemptions and publisher trust are among the bases those checks can accept.
 
 ## Commands
 
@@ -22,22 +22,24 @@ certified with `cargo vet` before it can land.
 cargo test --workspace                              # unit + the provenance checks
 cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
-cargo vet                                           # every delta certified by someone trusted
+cargo vet                                           # check audits, imports, trust and exemptions
 cargo vet suggest                                   # the review backlog, smallest diff first
 cargo deny --all-features check                     # licences, advisories, bans, sources
 cargo test --workspace render_the_provenance_record # rewrites PROVENANCE.md from the registry
 ```
 
-All of the above are CI gates. `PROVENANCE.md` is diff-checked, so regenerate it in the same commit as
-any provenance change.
+CI runs the formatting, lint, test, provenance-record, vet and deny checks; `cargo vet suggest` is
+a local way to inspect the review backlog. `PROVENANCE.md` is diff-checked against declarations,
+so regenerate it in the same commit as any provenance change. That check does not verify external
+lineage independently.
 
 ## Architecture
 
 - `src/provenance.rs` — the `Lineage`/`Origin` taxonomy, the `provenance!` macro, the `inventory`
   registry, and the Markdown renderer. A component declares itself; nothing keeps a second list.
 - `src/theme.rs` — nine semantic colour roles as a light/dark pair, plus terminal background detection.
-- `tests/provenance.rs` — the five checks that hold a lineage claim to its promises. They read the
-  manifest, the vendored trees and the licence files, so a claim that stopped being true fails here.
+- `tests/provenance.rs` — structural checks on declared lineage and repository files. They read the
+  manifest, vendored trees and licence files; they do not compare implementations with upstream code.
 - `vendor/<crate>/` — a tracked fork's vendored source, its `ADDITIONS.md`, and upstream's licence.
 - `supply-chain/` — `cargo vet`'s audits, imported peer audit sets, and the exemption backlog.
 
