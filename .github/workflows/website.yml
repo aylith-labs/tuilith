@@ -1,0 +1,69 @@
+name: Prepare Tuilith product home
+on:
+  push:
+    branches: [main]
+    paths: ['website/**', '.github/workflows/website.yml']
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Deploy after reviewing the built artifact and hosting binding
+        type: boolean
+        default: false
+      custom_domain:
+        description: Use the verified tuilith.aylith.com binding instead of repository base
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Select and verify hosting base
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CUSTOM_DOMAIN: ${{ inputs.custom_domain }}
+        run: |
+          set -eu
+          base=/tuilith
+          if [ "$CUSTOM_DOMAIN" = true ]; then
+            cname=$(gh api repos/${{ github.repository }}/pages --jq '.cname')
+            test "$cname" = tuilith.aylith.com
+            base=''
+          fi
+          echo "SITE_BASE=$base" >> "$GITHUB_ENV"
+      - run: python3 website/build.py --base "$SITE_BASE" --output "$RUNNER_TEMP/tuilith-site"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tuilith-site-review
+          path: ${{ runner.temp }}/tuilith-site
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: ${{ runner.temp }}/tuilith-site
+  deploy:
+    if: github.event_name == 'workflow_dispatch' && inputs.publish
+    needs: prepare
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Recheck the selected domain binding
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CUSTOM_DOMAIN: ${{ inputs.custom_domain }}
+        run: |
+          set -eu
+          cname=$(gh api repos/${{ github.repository }}/pages --jq '.cname // ""')
+          if [ "$CUSTOM_DOMAIN" = true ]; then test "$cname" = tuilith.aylith.com; else test -z "$cname"; fi
+      - uses: actions/deploy-pages@v4
+        id: deployment
