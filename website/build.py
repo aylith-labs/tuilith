@@ -49,6 +49,9 @@ def build(base, output):
     digest = hashlib.sha256((downloads / archive).read_bytes()).hexdigest()
     (downloads / (archive + '.sha256')).write_text(digest + '  ' + archive + '\n')
     html = (HERE / 'index.html').read_text().replace('@@BASE@@', base).replace('@@REV@@', revision).replace('@@ARCHIVE@@', archive)
+    for asset in ['site.css', 'site.js']:
+        version = hashlib.sha256((HERE / asset).read_bytes()).hexdigest()[:12]
+        html = html.replace('/assets/' + asset, '/assets/' + asset + '?v=' + version)
     if '@@' in html:
         raise ValueError('Unresolved website template field')
     (output / 'index.html').write_text(html)
