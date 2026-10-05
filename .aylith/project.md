@@ -1,4 +1,5 @@
 ---
+websiteUrl: https://tuilith.aylith.com/
 name: tuilith
 tagline: Reusable terminal UI components with declared provenance
 description: >-
