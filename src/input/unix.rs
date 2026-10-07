@@ -144,11 +144,8 @@ fn read(mut tty: &File, mut wake: &UnixStream, shared: &Shared) {
             }
             match crossterm::terminal::size() {
                 Ok((columns, rows)) => {
-                    parser
-                        .events
-                        .push_back(InternalEvent::Event(crossterm::event::Event::Resize(
-                            columns, rows,
-                        )))
+                    let resize = crossterm::event::Event::Resize(columns, rows);
+                    parser.events.push_back(InternalEvent::Event(resize));
                 }
                 Err(error) => {
                     fail(shared, error);

@@ -85,7 +85,7 @@ pub const QUERY_EVERY: Duration = Duration::from_secs(5);
 const DESKTOP_EVERY: Duration = Duration::from_secs(5);
 
 /// The longest the desktop probe backs off to while it keeps failing.
-const DESKTOP_BACKOFF_CAP: Duration = Duration::from_secs(300);
+const DESKTOP_BACKOFF_CAP: Duration = Duration::from_mins(5);
 
 /// Whether the terminal answers OSC 11.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -288,26 +288,24 @@ impl Follower {
         self.desktop.probe = None;
         // `COLORFGBG` can answer here too, but it is fixed for the process's lifetime: it is not the
         // desktop answering, and a desktop probe that fell through to it failed.
-        match outcome.filter(|reading| {
+        let desktop = outcome.filter(|reading| {
             matches!(
                 reading.source,
                 Source::WindowsRegistry | Source::MacOsDefaults
             )
-        }) {
-            Some(reading) => {
-                self.desktop.every = DESKTOP_EVERY;
-                self.desktop.next = now + DESKTOP_EVERY;
-                if self.follows_desktop() {
-                    self.set(reading.mode, reading.source)
-                } else {
-                    None
-                }
-            }
-            None => {
-                self.desktop.every = (self.desktop.every * 2).min(DESKTOP_BACKOFF_CAP);
-                self.desktop.next = now + self.desktop.every;
+        });
+        if let Some(reading) = desktop {
+            self.desktop.every = DESKTOP_EVERY;
+            self.desktop.next = now + DESKTOP_EVERY;
+            if self.follows_desktop() {
+                self.set(reading.mode, reading.source)
+            } else {
                 None
             }
+        } else {
+            self.desktop.every = (self.desktop.every * 2).min(DESKTOP_BACKOFF_CAP);
+            self.desktop.next = now + self.desktop.every;
+            None
         }
     }
 
