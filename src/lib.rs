@@ -23,6 +23,7 @@ pub mod background;
 #[cfg(feature = "document-tree")]
 pub mod document_tree;
 pub mod float;
+pub mod flow;
 pub mod inspect;
 pub mod overlay;
 pub mod pick;
@@ -34,6 +35,7 @@ pub mod theme;
 #[cfg(feature = "background")]
 pub use background::{Reading, Source};
 pub use float::{Anchor, Placement, Window};
+pub use flow::Pairs;
 pub use overlay::Overlay;
 pub use pick::{Filter, Hit, Match};
 pub use provenance::{Lineage, Origin, Provenance};

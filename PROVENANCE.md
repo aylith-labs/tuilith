@@ -14,6 +14,7 @@ anyone else's code; the Origin column says which of our repositories it was firs
 | `background` | original | polygit | — | 0.1 | Terminal dark/light resolution over four ordered signals, reporting which one answered |
 | `document_tree` | inspired | a private repository of ours | after polygit's settings preview | 0.1 | A JSON document as a tree you can fold, with per-node counts and folds held by path |
 | `float` | original | polygit | — | 0.1 | A floating window placed by corner and offset, so a resize cannot lose or corrupt where it was |
+| `flow` | original | a private repository of ours | — | 0.1 | Width-driven layout decisions — flowing rows, key/value stacking, columns, path-aware wrap — so a panel lays out from its own rect |
 | `inspect` | original | tuilith | — | 0.1 | Painted, readable and right-variant assertions over a rendered buffer |
 | `overlay` | original | tuilith | — | 0.1 | A floating surface that clears and repaints from the theme, so it cannot come out unpainted |
 | `pick` | inspired | tuilith | after fzf's positional bonus scoring | 0.1 | A typeahead filter that scores by subsequence and says where each match landed |

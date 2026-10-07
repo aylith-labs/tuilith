@@ -41,7 +41,7 @@ These are structural checks on the declarations and repository files.
 
 ## You compile the components you take
 
-`float`, `inspect`, `overlay`, `pick`, `provenance`, `scroll`, `tabs` and `theme` are always available.
+`float`, `flow`, `inspect`, `overlay`, `pick`, `provenance`, `scroll`, `tabs` and `theme` are always available.
 Background detection and the JSON document tree are feature-gated because they add dependencies:
 
 ```toml
