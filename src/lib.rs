@@ -24,6 +24,10 @@ pub mod background;
 pub mod document_tree;
 pub mod float;
 pub mod flow;
+#[cfg(feature = "follow")]
+pub mod follow;
+#[cfg(feature = "input")]
+pub mod input;
 pub mod inspect;
 pub mod overlay;
 pub mod pick;

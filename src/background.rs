@@ -68,8 +68,12 @@ pub const PROBE_TIMEOUT: Duration = Duration::from_millis(250);
 /// Which signal answered.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Source {
-    /// The terminal itself, over OSC 11. The only signal that describes the actual background.
+    /// The terminal itself, over OSC 11. Describes the actual background.
     Osc,
+    /// The terminal itself, in a mode-2031 colour-scheme report — pushed on every change, so the one
+    /// signal that needs no asking. Only a running application sees it, through
+    /// `follow::Follower`; nothing at startup produces it.
+    Report2031,
     /// The `COLORFGBG` environment variable, which a few terminals set. Fixed once the process starts.
     ColorFgBg,
     /// The Windows "apps use light theme" setting, read under WSL. Terminals that follow the desktop
@@ -87,6 +91,7 @@ impl Source {
     pub fn label(self) -> &'static str {
         match self {
             Self::Osc => "the terminal, over OSC 11",
+            Self::Report2031 => "the terminal, in a mode-2031 report",
             Self::ColorFgBg => "the COLORFGBG variable",
             Self::WindowsRegistry => "the Windows appearance setting",
             Self::MacOsDefaults => "the macOS appearance setting",
@@ -107,7 +112,7 @@ impl Source {
     /// desktop reports light here, and no signal in this module can notice.
     #[must_use]
     pub fn describes_the_terminal(self) -> bool {
-        self == Self::Osc
+        matches!(self, Self::Osc | Self::Report2031)
     }
 }
 
@@ -459,6 +464,7 @@ mod tests {
         // The desktop signals answer a nearby question, and flattening the two is how a dark terminal on
         // a light desktop gets told it is light.
         assert!(Source::Osc.describes_the_terminal());
+        assert!(Source::Report2031.describes_the_terminal());
         for desktop in [
             Source::ColorFgBg,
             Source::WindowsRegistry,

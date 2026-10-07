@@ -1532,10 +1532,13 @@ name = "tuilith"
 version = "0.1.0"
 dependencies = [
  "crossterm",
+ "futures-core",
  "insta",
  "inventory",
  "ratatui",
+ "rustix",
  "serde_json",
+ "signal-hook",
  "terminal-colorsaurus",
 ]
 

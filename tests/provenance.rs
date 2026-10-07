@@ -23,7 +23,12 @@ fn manifest() -> String {
 // check downstream would then be judging a truncated file against the full one. The complete set is
 // the only valid input, so the test declines rather than producing a plausible wrong answer.
 #[cfg_attr(
-    not(all(feature = "background", feature = "document-tree")),
+    not(all(
+        feature = "background",
+        feature = "document-tree",
+        feature = "follow",
+        feature = "input"
+    )),
     ignore = "the record is only complete when every component is compiled in"
 )]
 fn render_the_provenance_record() {

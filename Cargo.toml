@@ -18,10 +18,10 @@ keywords = ["ratatui", "tui", "terminal", "widgets", "supply-chain"]
 categories = ["command-line-interface"]
 # The provenance record is part of the package: a component's lineage is no use to a consumer who
 # cannot read it from the crate they installed.
-include = ["src/**", "README.md", "PROVENANCE.md", "LICENSE-*", "CHANGELOG.md"]
+include = ["src/**", "vendor/**", "README.md", "PROVENANCE.md", "LICENSE-*", "CHANGELOG.md"]
 
 [features]
-default = ["background", "document-tree", "os-appearance"]
+default = ["background", "document-tree", "follow", "input", "os-appearance"]
 
 # A component that needs a dependency of its own is a feature, so taking one component does not compile
 # the others' dependency trees. `theme`, `overlay`, `inspect` and `provenance` need only ratatui and the
@@ -37,6 +37,13 @@ document-tree = ["dep:serde_json"]
 # a library spawning processes is a fair thing to refuse, and refusing costs only those two signals:
 # the OSC query and `COLORFGBG` still work, and `Source` says when nothing answered.
 os-appearance = ["background"]
+# Terminal input that keeps the terminal's replies — mode-2031 colour-scheme reports, OSC 11 colours —
+# as events instead of typing them into the application as keys. crossterm's parser, vendored with that
+# fixed; `rustix` polls the terminal and `signal-hook` turns SIGWINCH into a resize, as in crossterm.
+input = ["dep:futures-core", "dep:rustix", "dep:signal-hook"]
+# Keeping a running application's light/dark mode current. Reads `input`'s replies, and falls back to
+# `background`'s desktop probes when the terminal answers nothing.
+follow = ["background", "input"]
 
 # The example drives the component it is named after, so it only exists when that component does.
 # Without this it is compiled under every feature selection and fails the no-default-features gate.
@@ -71,6 +78,15 @@ crossterm = "0.29.0"
 inventory = "0.3.24"
 serde_json = { version = "1.0.151", features = ["preserve_order"], optional = true }
 terminal-colorsaurus = { version = "1.0.3", optional = true }
+futures-core = { version = "0.3.33", optional = true }
+
+[target.'cfg(unix)'.dependencies]
+rustix = { version = "1.1.4", features = ["event"], optional = true }
+signal-hook = { version = "0.3.18", default-features = false, optional = true }
 
 [dev-dependencies]
 insta = "1.48.0"
+
+# A real pty for the input reader's test: a terminal in raw mode is the only honest place to feed it.
+[target.'cfg(unix)'.dev-dependencies]
+rustix = { version = "1.1.4", features = ["event", "fs", "pty", "termios"] }
