@@ -71,7 +71,7 @@ imported audit sets, publisher trust entries and exemptions. It also runs `cargo
 configured licence, advisory, ban and source policies. Passing those checks is not a claim that
 every dependency or component has been independently audited.
 
-The current `supply-chain/config.toml` has **130 exemption entries**. Exemptions are an explicit
+The current `supply-chain/config.toml` has **187 exemption entries**. Exemptions are an explicit
 review backlog, not evidence of completed reviews. `cargo vet suggest` can help prioritize that work.
 
 Publisher trust entries are recorded in `supply-chain/audits.toml`; they are another basis on which
