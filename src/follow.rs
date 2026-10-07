@@ -141,7 +141,11 @@ impl Follower {
     /// # Errors
     ///
     /// When [`ENABLE`] cannot be written.
-    pub fn start_on(reading: Reading, out: Box<dyn Write + Send>, now: Instant) -> io::Result<Self> {
+    pub fn start_on(
+        reading: Reading,
+        out: Box<dyn Write + Send>,
+        now: Instant,
+    ) -> io::Result<Self> {
         let mut follower = Self {
             reading,
             trust_desktop: matches!(
@@ -284,9 +288,12 @@ impl Follower {
         self.desktop.probe = None;
         // `COLORFGBG` can answer here too, but it is fixed for the process's lifetime: it is not the
         // desktop answering, and a desktop probe that fell through to it failed.
-        match outcome
-            .filter(|reading| matches!(reading.source, Source::WindowsRegistry | Source::MacOsDefaults))
-        {
+        match outcome.filter(|reading| {
+            matches!(
+                reading.source,
+                Source::WindowsRegistry | Source::MacOsDefaults
+            )
+        }) {
             Some(reading) => {
                 self.desktop.every = DESKTOP_EVERY;
                 self.desktop.next = now + DESKTOP_EVERY;
@@ -354,7 +361,8 @@ mod tests {
         }
 
         fn text(&self) -> String {
-            String::from_utf8_lossy(&self.0.lock().unwrap_or_else(PoisonError::into_inner)).into_owned()
+            String::from_utf8_lossy(&self.0.lock().unwrap_or_else(PoisonError::into_inner))
+                .into_owned()
         }
     }
 
@@ -418,7 +426,11 @@ mod tests {
     fn a_terminal_that_pushes_nothing_is_asked_on_a_cadence() {
         let (mut follower, recorder, now) = started(Source::Osc);
         assert_eq!(follower.tick_at(now + QUERY_EVERY / 2), None);
-        assert_eq!(recorder.queries(), 0, "the startup probe has only just asked");
+        assert_eq!(
+            recorder.queries(),
+            0,
+            "the startup probe has only just asked"
+        );
         follower.tick_at(now + QUERY_EVERY);
         assert_eq!(recorder.queries(), 1);
         assert_eq!(
@@ -441,7 +453,11 @@ mod tests {
     fn a_terminal_that_answers_device_attributes_first_is_not_asked_again() {
         let (mut follower, recorder, now) = started(Source::ColorFgBg);
         follower.tick_at(now);
-        assert_eq!(recorder.queries(), 1, "an unanswered startup probe is followed up at once");
+        assert_eq!(
+            recorder.queries(),
+            1,
+            "an unanswered startup probe is followed up at once"
+        );
         follower.observe_at(&Event::DeviceAttributes, now);
         follower.tick_at(now + QUERY_EVERY * 4);
         follower.observe_at(

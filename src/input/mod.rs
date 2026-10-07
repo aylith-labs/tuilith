@@ -189,7 +189,10 @@ pub(crate) enum InternalEvent {
     PrimaryDeviceAttributes,
     ColorScheme(Mode),
     Background(Rgb),
-    ModeReport { mode: u16, setting: u8 },
+    ModeReport {
+        mode: u16,
+        setting: u8,
+    },
     /// A complete sequence nothing here reads. Consumed so that none of it reaches the application.
     Unsupported,
 }

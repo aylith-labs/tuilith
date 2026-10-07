@@ -143,9 +143,13 @@ fn read(mut tty: &File, mut wake: &UnixStream, shared: &Shared) {
                 return;
             }
             match crossterm::terminal::size() {
-                Ok((columns, rows)) => parser.events.push_back(InternalEvent::Event(
-                    crossterm::event::Event::Resize(columns, rows),
-                )),
+                Ok((columns, rows)) => {
+                    parser
+                        .events
+                        .push_back(InternalEvent::Event(crossterm::event::Event::Resize(
+                            columns, rows,
+                        )))
+                }
                 Err(error) => {
                     fail(shared, error);
                     return;
@@ -227,7 +231,10 @@ mod tests {
         parser.advance(b"\x1B[?997;2nj");
         assert_eq!(
             parser.events.drain(..).collect::<Vec<_>>(),
-            vec![InternalEvent::ColorScheme(Mode::Light), key(KeyCode::Char('j'))],
+            vec![
+                InternalEvent::ColorScheme(Mode::Light),
+                key(KeyCode::Char('j'))
+            ],
         );
     }
 
@@ -235,7 +242,10 @@ mod tests {
     fn a_reply_split_after_its_escape_is_still_one_reply() {
         let mut parser = Parser::default();
         parser.advance(b"\x1B");
-        assert!(parser.events.is_empty(), "a lone ESC is held, not read as the key");
+        assert!(
+            parser.events.is_empty(),
+            "a lone ESC is held, not read as the key"
+        );
         assert!(parser.awaiting_escape());
         parser.advance(b"]11;rgb:0000/0000/0000\x07");
         assert_eq!(

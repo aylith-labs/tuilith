@@ -50,14 +50,18 @@ fn a_scheme_report_arrives_as_an_event_and_the_keys_after_it_still_arrive() {
     let (mut terminal, application) = pty();
     let events = EventStream::from_tty(application).expect("the reader starts");
 
-    terminal.write_all(b"\x1b[?997;2n").expect("the pty accepts writes");
+    terminal
+        .write_all(b"\x1b[?997;2n")
+        .expect("the pty accepts writes");
     assert_eq!(next(&events), Event::ColorScheme(Mode::Light));
     // The failure this exists for: stock crossterm holds this key in the report's buffer.
     terminal.write_all(b"j").expect("the pty accepts writes");
     assert_eq!(next(&events), key(KeyCode::Char('j')));
 
     // Report and key in the same read.
-    terminal.write_all(b"\x1b[?997;1nk").expect("the pty accepts writes");
+    terminal
+        .write_all(b"\x1b[?997;1nk")
+        .expect("the pty accepts writes");
     assert_eq!(next(&events), Event::ColorScheme(Mode::Dark));
     assert_eq!(next(&events), key(KeyCode::Char('k')));
 }
