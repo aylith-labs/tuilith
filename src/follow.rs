@@ -208,7 +208,7 @@ impl Follower {
                     self.set(rgb.mode(), Source::Osc)
                 }
             }
-            Event::DeviceAttributes => {
+            Event::DeviceAttributes(_) => {
                 if self.awaiting_reply {
                     self.awaiting_reply = false;
                     if self.osc == Osc::Unknown {
@@ -456,7 +456,7 @@ mod tests {
             1,
             "an unanswered startup probe is followed up at once"
         );
-        follower.observe_at(&Event::DeviceAttributes, now);
+        follower.observe_at(&Event::DeviceAttributes(vec![65, 1]), now);
         follower.tick_at(now + QUERY_EVERY * 4);
         follower.observe_at(
             &Event::Terminal(crossterm::event::Event::FocusGained),

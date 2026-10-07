@@ -78,6 +78,8 @@ pub(crate) fn parse_event(
                     b'[' => parse_csi(buffer),
                     // tuilith: an OSC reply, which upstream read as Alt+`]` followed by typed keys.
                     b']' => parse_osc(buffer, input_available),
+                    // tuilith: an APC reply (kitty graphics), which upstream typed in as Alt+`_` and keys.
+                    b'_' => parse_apc(buffer, input_available),
                     b'\x1B' => Ok(Some(InternalEvent::Event(Event::Key(KeyCode::Esc.into())))),
                     _ => parse_event(&buffer[1..], input_available).map(|event_option| {
                         event_option.map(|event| {
@@ -202,6 +204,9 @@ pub(crate) fn parse_csi(buffer: &[u8]) -> io::Result<Option<InternalEvent>> {
                         b'~' => return parse_csi_special_key_code(buffer),
                         b'u' => return parse_csi_u_encoded_key_code(buffer),
                         b'R' => return parse_csi_cursor_position(buffer),
+                        // tuilith: a status report and a window report, which upstream dropped.
+                        b'n' => return parse_csi_status_report(buffer),
+                        b't' => return parse_csi_window_report(buffer),
                         _ => return parse_csi_modifier_key_code(buffer),
                     }
                 }
@@ -293,11 +298,18 @@ fn parse_csi_primary_device_attributes(buffer: &[u8]) -> io::Result<Option<Inter
     assert!(buffer.starts_with(b"\x1B[?"));
     assert!(buffer.ends_with(b"c"));
 
-    // This is a stub for parsing the primary device attributes. This response is not
-    // exposed in the crossterm API so we don't need to parse the individual attributes yet.
     // See <https://vt100.net/docs/vt510-rm/DA1.html>
 
-    Ok(Some(InternalEvent::PrimaryDeviceAttributes))
+    // tuilith: the attributes are kept rather than discarded; attribute 4 is how a terminal says it
+    // draws sixel.
+    let s = std::str::from_utf8(&buffer[3..buffer.len() - 1])
+        .map_err(|_| could_not_parse_event_error())?;
+    let attributes = s
+        .split(';')
+        .filter_map(|attribute| attribute.parse::<u16>().ok())
+        .collect();
+
+    Ok(Some(InternalEvent::PrimaryDeviceAttributes(attributes)))
 }
 
 fn parse_modifiers(mask: u8) -> KeyModifiers {
@@ -972,6 +984,76 @@ fn parse_osc(buffer: &[u8], input_available: bool) -> io::Result<Option<Internal
     }))
 }
 
+/// `ESC _ G <control> ; <message>` terminated by ST or BEL — a kitty graphics protocol reply.
+///
+/// Only a `G` after `ESC _` starts one, because that is the only APC a terminal sends back; `ESC _`
+/// alone, or followed by anything else, is still Alt+`_` as upstream read it. A reply that names no
+/// image id is consumed whole.
+fn parse_apc(buffer: &[u8], input_available: bool) -> io::Result<Option<InternalEvent>> {
+    assert!(buffer.starts_with(b"\x1B_")); // ESC _
+
+    if buffer.len() == 2 {
+        if input_available {
+            return Ok(None);
+        }
+        return parse_event(&buffer[1..], false).map(alt_mapped);
+    }
+    if buffer[2] != b'G' {
+        return parse_event(&buffer[1..], input_available).map(alt_mapped);
+    }
+
+    let body = if buffer.ends_with(b"\x1B\\") {
+        &buffer[3..buffer.len() - 2]
+    } else if buffer.ends_with(b"\x07") {
+        &buffer[3..buffer.len() - 1]
+    } else if buffer.len() > MAX_SEQUENCE {
+        return Err(could_not_parse_event_error());
+    } else {
+        return Ok(None);
+    };
+
+    Ok(Some(parse_kitty_reply(body).unwrap_or(InternalEvent::Unsupported)))
+}
+
+/// `i=<id>[,…];<message>` — the image a kitty reply is about, and whether the terminal said `OK`.
+fn parse_kitty_reply(body: &[u8]) -> Option<InternalEvent> {
+    let body = std::str::from_utf8(body).ok()?;
+    let (control, message) = body.split_once(';')?;
+    let id = control
+        .split(',')
+        .find_map(|pair| pair.strip_prefix("i="))?
+        .parse::<u32>()
+        .ok()?;
+    Some(InternalEvent::KittyGraphics {
+        id,
+        ok: message == "OK",
+    })
+}
+
+/// `CSI Ps n` — a device status report: `CSI 0 n` from a terminal in good order, in reply to
+/// `CSI 5 n`. Replies come back in the order their queries were sent, so this one marks the end of
+/// every reply asked for before it.
+fn parse_csi_status_report(buffer: &[u8]) -> io::Result<Option<InternalEvent>> {
+    let s = std::str::from_utf8(&buffer[2..buffer.len() - 1])
+        .map_err(|_| could_not_parse_event_error())?;
+    let status = s.parse::<u16>().map_err(|_| could_not_parse_event_error())?;
+    Ok(Some(InternalEvent::Status { ok: status == 0 }))
+}
+
+/// `CSI 6 ; height ; width t` — one character cell's size in pixels, in reply to `CSI 16 t`. Any other
+/// window report is consumed whole.
+fn parse_csi_window_report(buffer: &[u8]) -> io::Result<Option<InternalEvent>> {
+    let s = std::str::from_utf8(&buffer[2..buffer.len() - 1])
+        .map_err(|_| could_not_parse_event_error())?;
+    let mut split = s.split(';');
+    if split.next() != Some("6") {
+        return Ok(Some(InternalEvent::Unsupported));
+    }
+    let height = next_parsed::<u16>(&mut split)?;
+    let width = next_parsed::<u16>(&mut split)?;
+    Ok(Some(InternalEvent::CellSize { width, height }))
+}
+
 #[cfg(test)]
 mod tuilith_tests {
     use super::*;
@@ -1056,6 +1138,80 @@ mod tuilith_tests {
             )))),
         );
         assert_eq!(parse_event(b"\x1B]", true).unwrap(), None);
+    }
+
+    #[test]
+    fn a_kitty_reply_names_its_image_and_whether_the_terminal_accepted_it() {
+        assert_eq!(
+            parse_event(b"\x1B_Gi=31;OK\x1B\\", false).unwrap(),
+            Some(InternalEvent::KittyGraphics { id: 31, ok: true }),
+        );
+        assert_eq!(
+            parse_event(b"\x1B_Gi=31,p=2;ENOENT:no such image\x1B\\", false).unwrap(),
+            Some(InternalEvent::KittyGraphics { id: 31, ok: false }),
+        );
+        // Split before the terminator, or inside the two-byte ST: still arriving.
+        assert_eq!(parse_event(b"\x1B_Gi=31;O", false).unwrap(), None);
+        assert_eq!(parse_event(b"\x1B_Gi=31;OK\x1B", false).unwrap(), None);
+        // No image id: nothing to attribute it to, but none of it is typed in either.
+        assert_eq!(
+            parse_event(b"\x1B_G;OK\x1B\\", false).unwrap(),
+            Some(InternalEvent::Unsupported),
+        );
+    }
+
+    #[test]
+    fn alt_underscore_typed_alone_is_still_a_key() {
+        assert_eq!(
+            parse_event(b"\x1B_", false).unwrap(),
+            Some(InternalEvent::Event(Event::Key(KeyEvent::new(
+                KeyCode::Char('_'),
+                KeyModifiers::ALT
+            )))),
+        );
+        assert_eq!(parse_event(b"\x1B_", true).unwrap(), None);
+    }
+
+    #[test]
+    fn device_attributes_keep_their_list() {
+        assert_eq!(
+            parse_event(b"\x1B[?64;1;4;22c", false).unwrap(),
+            Some(InternalEvent::PrimaryDeviceAttributes(vec![64, 1, 4, 22])),
+        );
+        assert_eq!(
+            parse_event(b"\x1B[?62c", false).unwrap(),
+            Some(InternalEvent::PrimaryDeviceAttributes(vec![62])),
+        );
+    }
+
+    #[test]
+    fn a_status_report_ends_at_its_final_byte() {
+        assert_eq!(
+            parse_event(b"\x1B[0n", false).unwrap(),
+            Some(InternalEvent::Status { ok: true }),
+        );
+        assert_eq!(
+            parse_event(b"\x1B[3n", false).unwrap(),
+            Some(InternalEvent::Status { ok: false }),
+        );
+        assert_eq!(parse_event(b"\x1B[0", true).unwrap(), None);
+    }
+
+    #[test]
+    fn a_cell_size_report_is_read_height_first() {
+        assert_eq!(
+            parse_event(b"\x1B[6;20;10t", false).unwrap(),
+            Some(InternalEvent::CellSize {
+                width: 10,
+                height: 20
+            }),
+        );
+        assert_eq!(parse_event(b"\x1B[6;20;", false).unwrap(), None);
+        // The text area in pixels, `CSI 4 ; h ; w t`: a reply, but not this one.
+        assert_eq!(
+            parse_event(b"\x1B[4;600;800t", false).unwrap(),
+            Some(InternalEvent::Unsupported),
+        );
     }
 
     #[test]

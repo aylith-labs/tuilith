@@ -27,7 +27,8 @@ fn manifest() -> String {
         feature = "background",
         feature = "document-tree",
         feature = "follow",
-        feature = "input"
+        feature = "input",
+        feature = "preview"
     )),
     ignore = "the record is only complete when every component is compiled in"
 )]

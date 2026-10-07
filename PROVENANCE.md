@@ -16,10 +16,16 @@ anyone else's code; the Origin column says which of our repositories it was firs
 | `float` | original | polygit | — | 0.1 | A floating window placed by corner and offset, so a resize cannot lose or corrupt where it was |
 | `flow` | original | a private repository of ours | — | 0.1 | Width-driven layout decisions — flowing rows, key/value stacking, columns, path-aware wrap — so a panel lays out from its own rect |
 | `follow` | original | tuilith | — | 0.1 | Keeps a running application's light/dark mode current from mode-2031 reports, OSC 11 and the desktop |
-| `input` | tracked fork | crossterm | `crossterm` @ `0.29.0` | 0.1 | crossterm's Unix input reader, keeping mode-2031 and OSC 11 replies as events instead of keys |
+| `input` | tracked fork | crossterm | `crossterm` @ `0.29.0` | 0.1 | crossterm's Unix input reader, keeping terminal replies — mode-2031, OSC 11, DA1, cell size, kitty graphics — as events instead of keys |
 | `inspect` | original | tuilith | — | 0.1 | Painted, readable and right-variant assertions over a rendered buffer |
 | `overlay` | original | tuilith | — | 0.1 | A floating surface that clears and repaints from the theme, so it cannot come out unpainted |
 | `pick` | inspired | tuilith | after fzf's positional bonus scoring | 0.1 | A typeahead filter that scores by subsequence and says where each match landed |
+| `preview::cache` | original | tuilith | — | 0.1 | Encoded pictures keyed by source, revision, box, cell size and protocol, evicted least recently used by encoded bytes |
+| `preview::graphics` | inspired | a private repository of ours | after yazi's adapter and emulator driver matrix | 0.1 | Which graphics protocol a terminal can show, decided from its environment before any query is believed |
+| `preview::picker` | wrapper | ratatui-image | `ratatui-image` 11.1 | 0.1 | ratatui-image's encoder for a decided graphics protocol and cell size, and the encoded protocols it produces |
+| `preview::probe` | original | tuilith | — | 0.1 | Asks the terminal for kitty graphics, sixel and its cell size through `input`, so an unanswered query costs no keystroke |
+| `preview::widget` | original | tuilith | — | 0.1 | Draws a cached picture, a pending box with a spinner, or a metadata card where pictures cannot be shown |
+| `preview::worker` | original | tuilith | — | 0.1 | A bounded thread pool that decodes, resizes and encodes pictures, delivering only the newest answer for each slot |
 | `scroll` | original | polygit | — | 0.1 | A scrollbar whose track is carved out of the area, so it cannot be drawn over the text |
 | `tabs` | original | a private repository of ours | — | 0.1 | A tab strip that returns the column range each tab landed on, so a click cannot drift from the paint |
 | `theme` | original | a private repository of ours | — | 0.1 | Nine semantic colour roles as a light and dark pair, with terminal background detection |

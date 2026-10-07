@@ -1,5 +1,6 @@
 //! Terminal input that keeps the terminal's *replies* — its colour scheme, its background colour, its
-//! mode reports — instead of typing them into the application as keys.
+//! mode reports, its device attributes, its cell size, its kitty graphics answers — instead of typing
+//! them into the application as keys.
 //!
 //! crossterm's reader is right about every byte a person produces. The bytes a terminal produces in
 //! answer to a query are where it goes wrong, in two ways that each cost a running application its
@@ -9,7 +10,7 @@
 //!   parser does not know. It reads that as "incomplete" and then holds every key typed after it,
 //!   waiting for a `u` or `c` that may never come.
 //! - An OSC 11 background reply (`ESC ] 11 ; rgb:… BEL`) parses as Alt+`]` followed by its text as
-//!   typed characters.
+//!   typed characters, and a kitty graphics reply (`ESC _ G … ESC \`) as Alt+`_` and the same.
 //!
 //! So an application reading through crossterm's `EventStream` cannot ask the terminal anything once
 //! it is running — which is exactly when a light/dark switch happens. This module is crossterm's Unix
@@ -59,7 +60,7 @@ use crate::theme::Mode;
 
 crate::provenance! {
     component: "input",
-    about: "crossterm's Unix input reader, keeping mode-2031 and OSC 11 replies as events instead of keys",
+    about: "crossterm's Unix input reader, keeping terminal replies — mode-2031, OSC 11, DA1, cell size, kitty graphics — as events instead of keys",
     origin: crate::Origin::Upstream("crossterm"),
     lineage: crate::Lineage::Tracked {
         crate_name: "crossterm",
@@ -100,9 +101,30 @@ pub enum Event {
         /// The DECRPM setting value.
         setting: u8,
     },
-    /// A primary device attributes reply (DA1). Every terminal answers it, so a query followed by DA1
-    /// tells a reply that is not coming from one that is merely slow.
-    DeviceAttributes,
+    /// A primary device attributes reply (DA1), with its attribute list — the conformance level first,
+    /// then what the terminal offers (`4` is sixel). Every terminal answers it, so a query followed by
+    /// DA1 tells a reply that is not coming from one that is merely slow.
+    DeviceAttributes(Vec<u16>),
+    /// A device status report (`CSI 0 n` when `ok`), in reply to `CSI 5 n`. Replies arrive in the order
+    /// their queries were sent, so this marks the end of every reply asked for before it.
+    Status {
+        /// The terminal reported itself in good order.
+        ok: bool,
+    },
+    /// One character cell's size in pixels, in reply to `CSI 16 t`.
+    CellSize {
+        /// Pixels across.
+        width: u16,
+        /// Pixels down.
+        height: u16,
+    },
+    /// A kitty graphics protocol reply: whether the terminal accepted the command for image `id`.
+    KittyGraphics {
+        /// The image id the command named.
+        id: u32,
+        /// The terminal answered `OK`.
+        ok: bool,
+    },
     /// A cursor position report, zero-based.
     CursorPosition {
         /// The cursor's column.
@@ -186,7 +208,18 @@ pub(crate) enum InternalEvent {
     Event(crossterm::event::Event),
     CursorPosition(u16, u16),
     KeyboardEnhancementFlags(KeyboardEnhancementFlags),
-    PrimaryDeviceAttributes,
+    PrimaryDeviceAttributes(Vec<u16>),
+    Status {
+        ok: bool,
+    },
+    CellSize {
+        width: u16,
+        height: u16,
+    },
+    KittyGraphics {
+        id: u32,
+        ok: bool,
+    },
     ColorScheme(Mode),
     Background(Rgb),
     ModeReport {
@@ -204,7 +237,10 @@ impl InternalEvent {
             Self::Event(event) => Event::Terminal(event),
             Self::CursorPosition(column, row) => Event::CursorPosition { column, row },
             Self::KeyboardEnhancementFlags(flags) => Event::KeyboardEnhancementFlags(flags),
-            Self::PrimaryDeviceAttributes => Event::DeviceAttributes,
+            Self::PrimaryDeviceAttributes(attributes) => Event::DeviceAttributes(attributes),
+            Self::Status { ok } => Event::Status { ok },
+            Self::CellSize { width, height } => Event::CellSize { width, height },
+            Self::KittyGraphics { id, ok } => Event::KittyGraphics { id, ok },
             Self::ColorScheme(mode) => Event::ColorScheme(mode),
             Self::Background(rgb) => Event::Background(rgb),
             Self::ModeReport { mode, setting } => Event::ModeReport { mode, setting },

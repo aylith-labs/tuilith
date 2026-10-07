@@ -31,6 +31,8 @@ pub mod input;
 pub mod inspect;
 pub mod overlay;
 pub mod pick;
+#[cfg(feature = "preview")]
+pub mod preview;
 pub mod provenance;
 pub mod scroll;
 pub mod tabs;

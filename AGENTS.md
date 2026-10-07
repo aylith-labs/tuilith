@@ -38,6 +38,10 @@ lineage independently.
 - `src/provenance.rs` — the `Lineage`/`Origin` taxonomy, the `provenance!` macro, the `inventory`
   registry, and the Markdown renderer. A component declares itself; nothing keeps a second list.
 - `src/theme.rs` — nine semantic colour roles as a light/dark pair, plus terminal background detection.
+- `src/preview/` — image previews: `graphics` decides kitty/sixel/halfblocks/none from the environment
+  before any query (a multiplexer answers about itself, so inside one nothing is asked), `probe` asks
+  the terminal through `input`'s stream rather than a second stdin reader, `worker` encodes off the UI
+  thread and drops stale answers, `cache` keeps encodings by byte budget, `widget` draws them.
 - `tests/provenance.rs` — structural checks on declared lineage and repository files. They read the
   manifest, vendored trees and licence files; they do not compare implementations with upstream code.
 - `vendor/<crate>/` — a tracked fork's vendored source, its `ADDITIONS.md`, and upstream's licence.

@@ -54,6 +54,11 @@ tuilith = { git = "https://github.com/aylith-labs/tuilith", default-features = f
 | `background` | terminal background detection | `terminal-colorsaurus` |
 | `document-tree` | a JSON document as a foldable tree | `serde_json` with `preserve_order` |
 | `os-appearance` | the desktop's light/dark setting (implies `background`) | — |
+| `preview` | image previews: graphics-protocol detection, an off-thread encoding pool, a cache bounded by encoded bytes, and the preview widget (implies `input`) | `ratatui-image` without its chafa backend, `image` with PNG only |
+
+`preview` decodes only PNG by itself. A consumer that previews other formats enables those codecs on
+its own `image` dependency (`features = ["jpeg", "gif", "webp"]`), and feature unification gives them
+to tuilith's decoder too.
 
 `preserve_order` is the reason this is a feature rather than a size optimisation: cargo unifies features
 across a dependency graph, so a consumer who wanted only `inspect` would otherwise find their own

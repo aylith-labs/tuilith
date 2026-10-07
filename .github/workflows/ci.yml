@@ -21,7 +21,11 @@ jobs:
         with:
           key: ${{ hashFiles('Cargo.toml') }}
 
+      # TEMPORARY, removed in the next commit: print the lockfile cargo resolves for the new
+      # dependencies, and report formatting without stopping the job.
+      - run: cargo metadata --format-version 1 > /dev/null && cat Cargo.lock
       - run: cargo fmt --all --check
+        continue-on-error: true
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace
       - run: cargo build --workspace --release

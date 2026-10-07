@@ -40,6 +40,19 @@ every `tuilith:` site.
    is not a feature of this crate; crossterm's default features include it, so `Event::Paste` exists.
 9. **Line endings normalised to LF.** Upstream's file is CRLF.
 10. **Tests added** in a `tuilith_tests` module beside upstream's, which are kept and run.
+11. **Kitty graphics replies** (`ESC _ G i=<id> ; <message>` terminated by ST or BEL, `parse_apc`)
+    parse to `InternalEvent::KittyGraphics`. Upstream read `ESC _` as Alt+`_` and the reply as typed
+    characters, so asking whether a terminal draws kitty graphics typed garbage into the application.
+    `ESC _` alone, or followed by anything but `G`, is still Alt+`_`; the same within-one-read caveat
+    and the same `MAX_SEQUENCE` cap as OSC apply.
+12. **DA1 keeps its attribute list** (`parse_csi_primary_device_attributes`). Upstream's stub discarded
+    it; attribute 4 is how a terminal says it draws sixel.
+13. **Device status reports** (`CSI Ps n`, `parse_csi_status_report`) parse to `InternalEvent::Status`.
+    Upstream fell through to the modifier-key parser and dropped them. `CSI 0 n` is the answer to
+    `CSI 5 n`, which ends a batch of queries because replies come back in order.
+14. **The cell-size report** (`CSI 6 ; height ; width t`, `parse_csi_window_report`) parses to
+    `InternalEvent::CellSize`; any other window report is consumed whole. Upstream dropped these the
+    same way.
 
 ## Not vendored
 

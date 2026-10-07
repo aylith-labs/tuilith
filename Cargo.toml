@@ -21,7 +21,7 @@ categories = ["command-line-interface"]
 include = ["src/**", "vendor/**", "README.md", "PROVENANCE.md", "LICENSE-*", "CHANGELOG.md"]
 
 [features]
-default = ["background", "document-tree", "follow", "input", "os-appearance"]
+default = ["background", "document-tree", "follow", "input", "os-appearance", "preview"]
 
 # A component that needs a dependency of its own is a feature, so taking one component does not compile
 # the others' dependency trees. `theme`, `overlay`, `inspect` and `provenance` need only ratatui and the
@@ -44,6 +44,12 @@ input = ["dep:futures-core", "dep:rustix", "dep:signal-hook"]
 # Keeping a running application's light/dark mode current. Reads `input`'s replies, and falls back to
 # `background`'s desktop probes when the terminal answers nothing.
 follow = ["background", "input"]
+# Image previews: which graphics protocol the terminal shows, encoding off the UI thread, a cache bounded
+# by encoded bytes, and the widget that draws one. `ratatui-image` comes without its default chafa
+# backend, a C library found through pkg-config, and `image` with PNG alone: a consumer enables the
+# codecs it reads on its own `image` dependency and unification brings them here. The probe reads the
+# terminal's answers through `input`.
+preview = ["input", "dep:ratatui-image", "dep:image"]
 
 # The example drives the component it is named after, so it only exists when that component does.
 # Without this it is compiled under every feature selection and fails the no-default-features gate.
@@ -68,10 +74,10 @@ cast_lossless = "allow"
 [dependencies]
 # A requirement is a promise about what a consumer can already be holding, and
 # `scripts/pin-declared-floors.py` builds against exactly the version each one names as its lowest.
-# So widen only as far as something has actually been built: 0.30 is the minor because 0.30.0 was
-# tested, while serde_json and terminal-colorsaurus keep their patch — widening those to the bare
-# minor declared 1.0.0, which is a decade below anything that compiles here.
-ratatui = "0.30"
+# So widen only as far as something has actually been built: serde_json and terminal-colorsaurus keep
+# their patch — widening those to the bare minor declared 1.0.0, which is a decade below anything that
+# compiles here — and ratatui names 0.30.1 because ratatui-image requires it, so 0.30.0 cannot resolve.
+ratatui = "0.30.1"
 crossterm = "0.29.0"
 # The distributed registry behind the provenance catalog: a component declares its own lineage next to
 # itself, and nothing keeps a second list that could disagree.
@@ -79,6 +85,9 @@ inventory = "0.3.24"
 serde_json = { version = "1.0.151", features = ["preserve_order"], optional = true }
 terminal-colorsaurus = { version = "1.0.3", optional = true }
 futures-core = { version = "0.3.33", optional = true }
+# The floor is what ratatui-image itself requires of `image`.
+ratatui-image = { version = "11.1", default-features = false, features = ["crossterm"], optional = true }
+image = { version = "0.25.6", default-features = false, features = ["png"], optional = true }
 
 [target.'cfg(unix)'.dependencies]
 rustix = { version = "1.1.4", features = ["event"], optional = true }
