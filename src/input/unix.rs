@@ -30,17 +30,29 @@ const ESCAPE_GRACE: Duration = Duration::from_millis(20);
 /// another wakeup, which level-triggered polling guarantees.
 const BUFFER: usize = 1_024;
 
-/// The terminal to read: standard input when it is one, `/dev/tty` otherwise — crossterm's rule.
+/// The terminal to read: the first standard stream that is one, and `/dev/tty` only when none is.
+///
+/// crossterm goes straight from stdin to `/dev/tty`. Here stderr and stdout come first, because a
+/// terminal emulator opens its pty read-write and hands the same device to all three streams, and
+/// because macOS `poll(2)` does not work on `/dev/tty` — so piping stdin into an application there
+/// would leave it with a reader that never wakes.
 pub(super) fn tty() -> io::Result<File> {
     let stdin = io::stdin();
     if stdin.is_terminal() {
-        Ok(File::from(stdin.as_fd().try_clone_to_owned()?))
-    } else {
-        std::fs::OpenOptions::new()
-            .read(true)
-            .write(true)
-            .open("/dev/tty")
+        return Ok(File::from(stdin.as_fd().try_clone_to_owned()?));
     }
+    let stderr = io::stderr();
+    if stderr.is_terminal() {
+        return Ok(File::from(stderr.as_fd().try_clone_to_owned()?));
+    }
+    let stdout = io::stdout();
+    if stdout.is_terminal() {
+        return Ok(File::from(stdout.as_fd().try_clone_to_owned()?));
+    }
+    std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open("/dev/tty")
 }
 
 /// What stops the reader: a byte on the socket it polls beside the terminal.

@@ -26,6 +26,16 @@ jobs:
       - run: cargo test --workspace
       - run: cargo build --workspace --release
 
+      # This job runs on Linux, so nothing else compiles the Windows input reader or the macOS build of
+      # the Unix one — and consumers ship both. `check` needs no linker, only each target's std.
+      - name: the other platforms compile
+        run: |
+          set -euo pipefail
+          for target in x86_64-pc-windows-msvc aarch64-apple-darwin; do
+            rustup target add "$target"
+            cargo check --workspace --all-features --target "$target"
+          done
+
       # Every feature this crate offers to turn off has to still compile with it off, and each one has
       # to compile on its own — a component that only builds because a sibling's feature happened to be
       # on is not optional, it is undeclared coupling. The list is read from the manifest rather than
