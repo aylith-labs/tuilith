@@ -360,7 +360,11 @@ mod tests {
                 .collect()
         };
         assert_eq!(for_slot(1), vec!["newer"], "a stale answer was delivered");
-        assert_eq!(for_slot(2), vec!["other"], "another slot's request was lost");
+        assert_eq!(
+            for_slot(2),
+            vec!["other"],
+            "another slot's request was lost"
+        );
         assert!(worker.poll().is_empty());
     }
 
@@ -392,7 +396,8 @@ mod tests {
 
     #[test]
     fn a_missing_file_comes_back_as_an_error() {
-        let directory = std::env::temp_dir().join(format!("tuilith-preview-{}", std::process::id()));
+        let directory =
+            std::env::temp_dir().join(format!("tuilith-preview-{}", std::process::id()));
         let worker = Worker::new(1).expect("a thread starts");
         worker.submit(
             1,

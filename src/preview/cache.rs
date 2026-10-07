@@ -186,16 +186,18 @@ impl PreviewCache {
     /// The entry just inserted is never evicted by its own insertion, even when it alone exceeds the
     /// budget: the picture being shown is the one picture that must stay drawable.
     pub fn insert(&mut self, key: Key, encoded: Arc<Encoded>) -> usize {
-        self.clock += 1;
+        if let Some(replaced) = self.entries.remove(&key) {
+            self.used -= replaced.encoded.bytes();
+        }
         self.used += encoded.bytes();
+        let evicted = self.evict_to_budget();
+        self.clock += 1;
         let entry = Entry {
             encoded,
             used_at: self.clock,
         };
-        if let Some(replaced) = self.entries.insert(key.clone(), entry) {
-            self.used -= replaced.encoded.bytes();
-        }
-        self.evict_keeping(&key)
+        self.entries.insert(key, entry);
+        evicted
     }
 
     /// Drop every entry of `source`, whatever its revision, box or protocol. Returns how many.
@@ -243,13 +245,14 @@ impl PreviewCache {
         self.entries.is_empty()
     }
 
-    fn evict_keeping(&mut self, keep: &Key) -> usize {
+    /// Evict least recently used entries until the budget holds, with the bytes of an entry about to
+    /// be inserted already counted — so it is never among those evicted.
+    fn evict_to_budget(&mut self) -> usize {
         let mut evicted = 0;
         while self.used > self.budget {
             let oldest = self
                 .entries
                 .iter()
-                .filter(|(key, _)| *key != keep)
                 .min_by_key(|(_, entry)| entry.used_at)
                 .map(|(key, _)| key.clone());
             let Some(oldest) = oldest else {
@@ -322,7 +325,10 @@ mod tests {
     #[test]
     fn eviction_is_by_encoded_bytes_and_least_recently_used_goes_first() {
         let size = encoded(4, 2).bytes();
-        assert!(size > 0, "the fixture costs nothing, so the budget is untestable");
+        assert!(
+            size > 0,
+            "the fixture costs nothing, so the budget is untestable"
+        );
         // Room for two entries and a half: the third insert must evict exactly one.
         let mut cache = PreviewCache::new(size * 5 / 2);
         assert_eq!(cache.insert(key("a", "1"), encoded(4, 2)), 0);
@@ -331,7 +337,10 @@ mod tests {
         assert!(cache.get(&key("a", "1")).is_some());
         assert_eq!(cache.insert(key("c", "1"), encoded(4, 2)), 1);
         assert!(cache.contains(&key("a", "1")));
-        assert!(!cache.contains(&key("b", "1")), "the recently used entry went first");
+        assert!(
+            !cache.contains(&key("b", "1")),
+            "the recently used entry went first"
+        );
         assert!(cache.contains(&key("c", "1")));
         assert_eq!(cache.used_bytes(), size * 2);
         assert!(cache.used_bytes() <= cache.budget_bytes());
@@ -347,7 +356,10 @@ mod tests {
             cache.insert(key(source, "1"), encoded(2, 1));
         }
         let evicted = cache.insert(key("big", "1"), big);
-        assert!(evicted >= 3, "only {evicted} evicted for a picture of many times the size");
+        assert!(
+            evicted >= 3,
+            "only {evicted} evicted for a picture of many times the size"
+        );
         assert!(cache.used_bytes() <= cache.budget_bytes());
         assert!(cache.contains(&key("big", "1")));
     }
@@ -356,7 +368,10 @@ mod tests {
     fn an_entry_over_the_whole_budget_is_kept_and_everything_else_goes() {
         let mut cache = PreviewCache::new(1);
         cache.insert(key("a", "1"), encoded(2, 1));
-        assert!(cache.contains(&key("a", "1")), "the picture being shown was evicted");
+        assert!(
+            cache.contains(&key("a", "1")),
+            "the picture being shown was evicted"
+        );
         cache.insert(key("b", "1"), encoded(2, 1));
         assert!(!cache.contains(&key("a", "1")));
         assert!(cache.contains(&key("b", "1")));

@@ -134,10 +134,10 @@ pub fn ask(
         if left.is_zero() {
             break;
         }
-        if let Some(event) = next(left)? {
-            if !asked.replies.observe(&event) {
-                asked.passed.push(event);
-            }
+        if let Some(event) = next(left)?
+            && !asked.replies.observe(&event)
+        {
+            asked.passed.push(event);
         }
     }
     Ok(asked)
@@ -332,7 +332,10 @@ mod tests {
     #[test]
     fn the_query_names_the_id_its_reply_is_matched_by() {
         assert!(QUERY.starts_with(&format!("\x1b_Gi={KITTY_QUERY_ID},")));
-        assert!(QUERY.ends_with("\x1b[5n"), "the status report must be asked last");
+        assert!(
+            QUERY.ends_with("\x1b[5n"),
+            "the status report must be asked last"
+        );
     }
 
     #[test]

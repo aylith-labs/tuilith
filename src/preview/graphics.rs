@@ -263,11 +263,11 @@ pub fn decide(
 mod tests {
     use super::*;
 
-    fn lying() -> Option<Probe> {
-        Some(Probe {
+    fn lying() -> Probe {
+        Probe {
             kitty: true,
             sixel: true,
-        })
+        }
     }
 
     #[test]
@@ -276,7 +276,7 @@ mod tests {
             term_program: "herdr".into(),
             ..Env::default()
         };
-        let decision = decide(Some(Protocol::Sixel), &env, true, lying());
+        let decision = decide(Some(Protocol::Sixel), &env, true, Some(lying()));
         assert_eq!(decision.protocol, Protocol::Sixel);
         assert!(!decision.needs_probe);
     }
@@ -288,7 +288,7 @@ mod tests {
             term: "xterm-256color".into(),
             ..Env::default()
         };
-        let decision = decide(None, &env, true, lying());
+        let decision = decide(None, &env, true, Some(lying()));
         assert_eq!(decision.protocol, Protocol::Halfblocks);
         assert!(!decision.needs_probe, "herdr's answers are never asked for");
         assert!(env.multiplexed());
@@ -302,7 +302,7 @@ mod tests {
             ..Env::default()
         };
         assert_eq!(
-            decide(None, &env, true, lying()).protocol,
+            decide(None, &env, true, Some(lying())).protocol,
             Protocol::Halfblocks
         );
     }
@@ -356,7 +356,10 @@ mod tests {
             sixel: true,
         });
         assert_eq!(decide(None, &env, true, sixel).protocol, Protocol::Sixel);
-        assert_eq!(decide(None, &env, true, lying()).protocol, Protocol::Kitty);
+        assert_eq!(
+            decide(None, &env, true, Some(lying())).protocol,
+            Protocol::Kitty
+        );
         let nothing = Some(Probe::default());
         assert_eq!(
             decide(None, &env, true, nothing).protocol,

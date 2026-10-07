@@ -404,7 +404,9 @@ mod tests {
             let drawn = image.draw(&mut buffer, area);
             assert_themed(&buffer, area, mode);
 
-            let hint = drawn.hint.expect("a card with a hint reports where it went");
+            let hint = drawn
+                .hint
+                .expect("a card with a hint reports where it went");
             assert_eq!(text_of(&buffer, hint), "o open externally");
             assert!(area.contains(hint.as_position()));
             assert_eq!(buffer[(hint.x, hint.y)].fg, palette.dim);
@@ -414,7 +416,8 @@ mod tests {
                 .collect();
             assert!(rows.iter().any(|row| row.contains("harbour.png")));
             assert!(
-                rows.iter().any(|row| row.contains("640×480 px · 1.5 KB · PNG")),
+                rows.iter()
+                    .any(|row| row.contains("640×480 px · 1.5 KB · PNG")),
                 "{rows:#?}"
             );
             // Outside the area nothing was touched.
@@ -459,7 +462,12 @@ mod tests {
             .expect("halfblocks has an encoder")
             .new_protocol(image, Size::new(columns, rows), Resize::Fit(None))
             .expect("a synthetic picture encodes");
-        Encoded::new(encoding, cell, (u32::from(columns) * 10, u32::from(rows) * 20), None)
+        Encoded::new(
+            encoding,
+            cell,
+            (u32::from(columns) * 10, u32::from(rows) * 20),
+            None,
+        )
     }
 
     #[test]
@@ -468,8 +476,8 @@ mod tests {
         let encoded = halfblocks(6, 2);
         let area = Rect::new(0, 0, 20, 8);
         let mut buffer = Buffer::empty(area);
-        let image = Image::new(&meta, Protocol::Halfblocks, Mode::Dark.palette())
-            .encoded(Some(&encoded));
+        let image =
+            Image::new(&meta, Protocol::Halfblocks, Mode::Dark.palette()).encoded(Some(&encoded));
         assert_eq!(image.shows(), Shows::Picture);
         let drawn = image.draw(&mut buffer, area);
         assert_eq!(drawn.picture, Some(Rect::new(7, 3, 6, 2)));
