@@ -16,10 +16,25 @@ jobs:
 
       # No toolchain action: rustup is preinstalled on the runner and honours rust-toolchain.toml, so
       # the pinned channel and its components install on the first cargo call. One less third-party
-      # action in the supply chain of a repo whose point is auditing its supply chain.
+      # action in the supply chain of a repo whose point is auditing its supply chain. A self-hosted
+      # runner's home persists, so a rustup something deleted stays deleted: restore it from the
+      # rustup-init a provisioned runner keeps in /opt/ci-local/dist.
+      - name: Restore rustup if missing
+        run: |
+          if ! command -v rustup > /dev/null; then
+            init="$(printf '%s\n' /opt/ci-local/dist/rustup-init-* | sort -V | tail -1)"
+            [ -x "$init" ] || { echo "::error::rustup is not installed for $(id -un) and no rustup-init is provisioned in /opt/ci-local/dist"; exit 127; }
+            "$init" -y --no-modify-path --default-toolchain none --profile default > /dev/null
+            echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          fi
+
+      # cache-bin off: with it on, the post step deletes every regular file that was in ~/.cargo/bin
+      # when the job started (getCargoBins/cleanBin) — rustup itself. Harmless on a throwaway hosted
+      # VM; on a self-hosted runner, whose home persists, it leaves every later job without rustup.
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{ hashFiles('Cargo.toml') }}
+          cache-bin: "false"
 
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
