@@ -1,5 +1,5 @@
 """Build the public static library home and an exact pinned source download."""
-import argparse, hashlib, json, os, pathlib, re, shutil, zipfile
+import argparse, hashlib, json, os, pathlib, re, shutil, subprocess, zipfile
 
 HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parent
@@ -19,8 +19,8 @@ def build(base, output):
         path = pathlib.PurePosixPath(row['path'])
         if path.is_absolute() or '..' in path.parts or any(x in ('.git', '.env', 'node_modules', 'target') for x in path.parts):
             raise ValueError('Forbidden source archive path')
-        source = ROOT / path
-        data = os.readlink(source).encode() if source.is_symlink() else source.read_bytes()
+        # Bytes come from the pinned commit, not the working tree, so later commits cannot break the build.
+        data = subprocess.run(['git', '-C', str(ROOT), 'cat-file', 'blob', revision + ':' + str(path)], check=True, capture_output=True).stdout
         if hashlib.sha256(data).hexdigest() != row['sha256']:
             raise ValueError('Pinned source byte mismatch: ' + str(path))
         blob = hashlib.sha1(b'blob ' + str(len(data)).encode() + b'\0' + data).hexdigest()
