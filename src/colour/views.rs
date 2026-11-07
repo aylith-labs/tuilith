@@ -988,6 +988,10 @@ impl View for Swatches {
         &self.title
     }
 
+    fn chooses(&self) -> bool {
+        true
+    }
+
     fn size(&self, state: &State, config: &Config) -> Size {
         let rows = self.rows_of(state);
         let pitch = glyph_width(config) + 1;
@@ -1127,9 +1131,9 @@ fn typing(key: KeyEvent, state: &mut State) -> Option<Outcome> {
     }
     state.refusal = None;
     state.refilter();
-    let query = state.filter.query();
-    let bare = !query.starts_with('#') && !state.filter.hits().is_empty();
-    if let Ok(Choice::Colour(rgb)) = super::parse(query, &state.entries)
+    let query = state.filter.query().to_string();
+    let bare = !query.starts_with('#') && state.name_starting(&query).is_some();
+    if let Ok(Choice::Colour(rgb)) = state.parse(&query)
         && !bare
     {
         // A typed colour previews as it becomes one; nothing is chosen until Enter.
@@ -1297,6 +1301,10 @@ impl List {
 impl View for List {
     fn title(&self) -> &'static str {
         "named"
+    }
+
+    fn chooses(&self) -> bool {
+        true
     }
 
     fn size(&self, state: &State, _config: &Config) -> Size {

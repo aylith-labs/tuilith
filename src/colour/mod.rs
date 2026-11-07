@@ -457,7 +457,7 @@ pub struct Refusal(pub String);
 
 /// Read typed text as a colour.
 ///
-/// Accepts `#rgb`, `#rrggbb` (the `#` optional), `rgb(r, g, b)`, `hsl(h, s%, l%)`, one of the sixteen
+/// Accepts `#rgb`, `#rrggbb` (the `#` optional on the long form), `rgb(r, g, b)`, `hsl(h, s%, l%)`, one of the sixteen
 /// terminal colour names, or the label of one of `entries` (case ignored). An entry wins over a
 /// built-in name of the same spelling, because the host's meaning of `red` is the one being edited.
 ///
@@ -495,13 +495,16 @@ pub fn parse(text: &str, entries: &[Entry]) -> Result<Choice, Refusal> {
 }
 
 fn hex(text: &str) -> Option<Rgb> {
+    let marked = text.starts_with('#');
     let digits = text.strip_prefix('#').unwrap_or(text);
     if !digits.chars().all(|c| c.is_ascii_hexdigit()) {
         return None;
     }
     let value = |at: std::ops::Range<usize>| u8::from_str_radix(&digits[at], 16).ok();
     match digits.len() {
-        3 => {
+        // Three bare digits are as likely a number (`208`, an ANSI index to many hosts) as a colour,
+        // so the short form needs its `#`.
+        3 if marked => {
             let expand = |at: usize| value(at..at + 1).map(|v| v * 17);
             Some(Rgb::new(expand(0)?, expand(1)?, expand(2)?))
         }
@@ -749,9 +752,31 @@ impl Default for Config {
 // State
 // ---------------------------------------------------------------------------------------------------
 
+/// The host's own reading of typed text, where it accepts something [`parse`] does not, or refuses
+/// something it does: a key that takes palette roles only, an `off`, an ANSI number.
+#[derive(Clone)]
+pub struct Parser(std::rc::Rc<ParseFn>);
+
+/// What a [`Parser`] calls.
+type ParseFn = dyn Fn(&str, &[Entry]) -> Result<Choice, Refusal>;
+
+impl Parser {
+    /// A parser from a function of the typed text and the entries.
+    pub fn new(parse: impl Fn(&str, &[Entry]) -> Result<Choice, Refusal> + 'static) -> Self {
+        Self(std::rc::Rc::new(parse))
+    }
+}
+
+impl std::fmt::Debug for Parser {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str("Parser")
+    }
+}
+
 /// The one colour every view reads and writes, and what has been typed.
 #[derive(Clone, Debug)]
 pub struct State {
+    parser: Option<Parser>,
     hsv: Hsv,
     original: Rgb,
     named: Option<usize>,
@@ -778,6 +803,7 @@ impl State {
         let mut filter = Filter::new();
         filter.refilter(std::iter::empty());
         Self {
+            parser: None,
             hsv: rgb.hsv(),
             original: rgb,
             named: None,
@@ -791,6 +817,43 @@ impl State {
             tab: 0,
             edit: None,
         }
+    }
+
+    /// A state that reads typed text with the host's parser rather than [`parse`].
+    #[must_use]
+    pub fn with_parser(mut self, parser: Parser) -> Self {
+        self.parser = Some(parser);
+        self
+    }
+
+    /// Read `text` the way this state does: the host's parser where it gave one, else [`parse`].
+    ///
+    /// # Errors
+    ///
+    /// The refusal of whichever parser read it.
+    pub fn parse(&self, text: &str) -> Result<Choice, Refusal> {
+        match &self.parser {
+            Some(parser) => (parser.0)(text, &self.entries),
+            None => parse(text, &self.entries),
+        }
+    }
+
+    /// Refuse what was typed, in the host's words, until the next keystroke. Nothing changes.
+    pub fn refuse(&mut self, refusal: Refusal) {
+        self.refusal = Some(refusal);
+    }
+
+    /// The entry whose label starts with `typed`, ignoring case: what someone typing into a list of
+    /// names is most likely typing.
+    #[must_use]
+    pub fn name_starting(&self, typed: &str) -> Option<usize> {
+        let typed = typed.trim().to_ascii_lowercase();
+        if typed.is_empty() {
+            return None;
+        }
+        self.entries
+            .iter()
+            .position(|entry| entry.label.to_ascii_lowercase().starts_with(&typed))
     }
 
     /// A state with host-named entries, the list filtered by nothing yet.
@@ -912,15 +975,14 @@ impl State {
             }
             return false;
         }
-        // `acc` is a short hex and the start of `accent`. Without a `#`, a name the list still shows
-        // wins: someone typing into a list of names is typing a name.
+        // `facade` is a hex and the start of a name a host might have. Without a `#`, a name that
+        // starts with what was typed wins: someone typing into a list of names is typing a name.
         let bare_hex = !typed.starts_with('#') && hex(&typed.to_ascii_lowercase()).is_some();
-        if bare_hex && let Some(hit) = self.filter.selected() {
-            let index = hit.index;
+        if bare_hex && let Some(index) = self.name_starting(&typed) {
             self.set_named(index);
             return true;
         }
-        match parse(&typed, &self.entries) {
+        match self.parse(&typed) {
             Ok(Choice::Named(index)) => {
                 self.set_named(index);
                 true
@@ -1047,6 +1109,13 @@ pub trait View {
     /// Whether Tab stops on it.
     fn focusable(&self) -> bool {
         true
+    }
+
+    /// Whether a press that changes the colour here is a choice, as on a list row or a swatch, rather
+    /// than an adjustment, as on a field or a slider. A choice comes back from [`Picker::press`] as
+    /// [`Outcome::Accepted`], so a dropdown can close on it.
+    fn chooses(&self) -> bool {
+        false
     }
 
     /// Draw into `area`, and nowhere else.
@@ -1522,11 +1591,16 @@ impl Picker {
             if contains(rect, column, row) {
                 state.focus = at;
                 state.hover = None;
-                return if self.slots[at].view.press(rect, column, row, state, config) {
-                    Outcome::Changed
-                } else {
-                    Outcome::Handled
-                };
+                if !self.slots[at].view.press(rect, column, row, state, config) {
+                    return Outcome::Handled;
+                }
+                if !self.slots[at].view.chooses() {
+                    return Outcome::Changed;
+                }
+                if let Choice::Colour(rgb) = state.choice() {
+                    state.set_rgb(config.depth.shown(rgb));
+                }
+                return Outcome::Accepted(state.choice());
             }
         }
         Outcome::Ignored

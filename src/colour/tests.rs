@@ -49,6 +49,7 @@ fn every_written_form_parses_to_the_colour_it_names() {
         ("#5cbdfa", Rgb::new(0x5c, 0xbd, 0xfa)),
         ("5CBDFA", Rgb::new(0x5c, 0xbd, 0xfa)),
         ("#f80", Rgb::new(0xff, 0x88, 0x00)),
+        ("#208", Rgb::new(0x22, 0x00, 0x88)),
         ("rgb(92, 189, 250)", Rgb::new(92, 189, 250)),
         ("hsl(0, 100%, 50%)", Rgb::new(255, 0, 0)),
         ("hsl(120, 100%, 25%)", Rgb::new(0, 128, 0)),
@@ -62,7 +63,10 @@ fn every_written_form_parses_to_the_colour_it_names() {
 
 #[test]
 fn text_that_is_no_colour_is_refused_with_what_is_accepted() {
+    // `208` is a number to many hosts, so three bare digits are not a colour without their `#`.
     for text in [
+        "208",
+        "f80",
         "#12",
         "#12345",
         "#gggggg",
@@ -526,9 +530,9 @@ fn the_recent_row_waits_for_two_colours_and_picks_one() {
     assert_eq!(picker.layout(area, &state, &config).len(), 1);
     assert_eq!(
         picker.press(area, 3, 1, &mut state, &config),
-        Outcome::Changed
+        Outcome::Accepted(Choice::Colour(Rgb::new(200, 100, 0))),
+        "a swatch press is a choice"
     );
-    assert_eq!(state.rgb(), Rgb::new(200, 100, 0));
 }
 
 #[test]
@@ -632,9 +636,9 @@ fn a_list_row_draws_its_swatch_and_a_press_chooses_it() {
     assert_eq!(buffer[(0, 5)].symbol(), " ", "no colour, no swatch");
     assert_eq!(
         picker.press(area, 10, 3, &mut state, &config),
-        Outcome::Changed
+        Outcome::Accepted(Choice::Named(1)),
+        "a list press is a choice"
     );
-    assert_eq!(state.choice(), Choice::Named(1));
 }
 
 // --- the panel, the footer, the picker --------------------------------------------------------------
@@ -1025,4 +1029,85 @@ fn every_view_in_the_full_preset_sees_the_same_colour() {
     picker.draw(area, &mut buffer, &state, &config, &DEFAULT_DARK);
     assert!(row_text(&buffer, 0).contains(&COMMON[1][0].hex()));
     assert!(frame_text(&buffer).contains('◉'), "the field marks it");
+}
+
+#[test]
+fn a_field_press_adjusts_where_a_list_or_swatch_press_chooses() {
+    let config = Config::default();
+    let mut picker = Picker::preset(Preset::Full, &config);
+    let mut state = State::new(Rgb::new(0x5c, 0xbd, 0xfa));
+    let area = Rect::new(0, 0, 80, 24);
+    assert_eq!(
+        picker.press(area, 4, 3, &mut state, &config),
+        Outcome::Changed
+    );
+}
+
+#[test]
+fn a_hosts_parser_decides_what_typing_takes_and_says_why_not() {
+    let config = Config::default();
+    let mut picker = Picker::preset(Preset::Inline, &config);
+    // A host whose key takes palette roles only.
+    let roles_only = Parser::new(|text, entries| {
+        entries
+            .iter()
+            .position(|entry| entry.label.eq_ignore_ascii_case(text.trim()))
+            .map(Choice::Named)
+            .ok_or_else(|| Refusal("takes a palette role: accent, warn or red".into()))
+    });
+    let original = Rgb::new(1, 2, 3);
+    let mut state = State::new(original)
+        .with_entries(entries())
+        .with_parser(roles_only);
+    typed(&mut picker, &mut state, &config, "#ff8800");
+    assert_eq!(
+        state.rgb(),
+        original,
+        "a colour the host refuses does not preview"
+    );
+    assert_eq!(
+        picker.key(key(KeyCode::Enter), &mut state, &config),
+        Outcome::Changed
+    );
+    assert_eq!(
+        state.refusal().map(|r| r.0.as_str()),
+        Some("takes a palette role: accent, warn or red")
+    );
+    // Without the hook the same text is a colour.
+    let mut plain = State::new(original).with_entries(entries());
+    typed(&mut picker, &mut plain, &config, "#ff8800");
+    assert_eq!(plain.rgb(), Rgb::new(0xff, 0x88, 0x00));
+
+    let mut refused = State::new(original);
+    refused.refuse(Refusal("the host says no".into()));
+    assert_eq!(
+        refused.refusal().map(|r| r.0.as_str()),
+        Some("the host says no")
+    );
+}
+
+#[test]
+fn a_bare_hex_loses_only_to_a_name_it_starts() {
+    let config = Config::default();
+    let mut picker = Picker::preset(Preset::Inline, &config);
+    let names = vec![
+        Entry::new("facade", Some(Rgb::new(1, 1, 1))),
+        Entry::new("surface_dim", Some(Rgb::new(2, 2, 2))),
+    ];
+    // `facade` is a hex, and the name it spells wins.
+    let mut state = State::new(Rgb::new(0, 0, 0)).with_entries(names);
+    typed(&mut picker, &mut state, &config, "facade");
+    assert_eq!(
+        picker.key(key(KeyCode::Enter), &mut state, &config),
+        Outcome::Accepted(Choice::Named(0))
+    );
+    // `fedcba` is a subsequence of nothing it starts: the hex wins over a fuzzy match.
+    let mut state =
+        State::new(Rgb::new(0, 0, 0)).with_entries(vec![Entry::new("surface_dim_fedcba", None)]);
+    assert_eq!(state.name_starting("ace"), None);
+    typed(&mut picker, &mut state, &config, "fedcba");
+    assert_eq!(
+        picker.key(key(KeyCode::Enter), &mut state, &config),
+        Outcome::Accepted(Choice::Colour(Rgb::new(0xfe, 0xdc, 0xba)))
+    );
 }
