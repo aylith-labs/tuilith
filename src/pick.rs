@@ -322,6 +322,12 @@ impl Filter {
         };
     }
 
+    /// Put the cursor on the hit at `offset` in [`Self::hits`], clamped to the last one — a click on a
+    /// row, or a host putting the cursor back on an item after the list under it changed.
+    pub fn select(&mut self, offset: usize) {
+        self.selected = offset.min(self.hits.len().saturating_sub(1));
+    }
+
     /// Scroll so the selection is inside a viewport `height` rows tall.
     pub fn follow(&mut self, height: usize) {
         if height == 0 {

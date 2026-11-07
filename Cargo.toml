@@ -21,7 +21,7 @@ categories = ["command-line-interface"]
 include = ["src/**", "vendor/**", "README.md", "PROVENANCE.md", "LICENSE-*", "CHANGELOG.md"]
 
 [features]
-default = ["background", "document-tree", "follow", "input", "os-appearance", "preview"]
+default = ["background", "document-tree", "find", "follow", "input", "os-appearance", "preview"]
 
 # A component that needs a dependency of its own is a feature, so taking one component does not compile
 # the others' dependency trees. `theme`, `overlay`, `inspect` and `provenance` need only ratatui and the
@@ -41,6 +41,10 @@ os-appearance = ["background"]
 # as events instead of typing them into the application as keys. crossterm's parser, vendored with that
 # fixed; `rustix` polls the terminal and `signal-hook` turns SIGWINCH into a resize, as in crossterm.
 input = ["dep:futures-core", "dep:rustix", "dep:signal-hook"]
+# A finder over folders, repositories or files, and a folder picker. No dependency of its own: it is a
+# feature because it reads the filesystem, runs `git ls-files`, and scans on a thread of its own, which
+# a consumer that wanted only a widget should not be handed.
+find = []
 # Keeping a running application's light/dark mode current. Reads `input`'s replies, and falls back to
 # `background`'s desktop probes when the terminal answers nothing.
 follow = ["background", "input"]

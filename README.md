@@ -54,6 +54,7 @@ tuilith = { git = "https://github.com/aylith-labs/tuilith", default-features = f
 | `background` | terminal background detection | `terminal-colorsaurus` |
 | `document-tree` | a JSON document as a foldable tree | `serde_json` with `preserve_order` |
 | `os-appearance` | the desktop's light/dark setting (implies `background`) | — |
+| `find` | a finder over folders, git repositories or files, drawn at once from the goto-repo cache and revalidated on a thread without moving the row under the pointer, plus a folder-by-folder picker | — (it reads the filesystem and runs `git ls-files`, which a consumer can decline) |
 | `preview` | image previews: graphics-protocol detection, an off-thread encoding pool, a cache bounded by encoded bytes, and the preview widget (implies `input`) | `ratatui-image` without its chafa backend, `image` with PNG only |
 
 `preview` decodes only PNG by itself. A consumer that previews other formats enables those codecs on
@@ -63,6 +64,21 @@ to tuilith's decoder too.
 `preserve_order` is the reason this is a feature rather than a size optimisation: cargo unifies features
 across a dependency graph, so a consumer who wanted only `inspect` would otherwise find their own
 `serde_json` reordering maps.
+
+## The finder
+
+`find` came from [polygit](https://github.com/steven-pribilinskiy/polygit), which uses it for its
+repository finder and its folder picker. A host describes it with `find::Config` — which sources
+(git repositories, every folder under some roots, home, root, bookmarks, the whole goto-repo cache, in
+any combination), how a row reads (name, path, name with the path right-aligned, or two rows), the
+order, the snapshot's path and TTL — and maps its own settings onto that struct; tuilith reads no
+config file of its own. It draws in the host's `Palette`.
+
+It reads goto-repo's files as they are (`~/.cache/goto-repo/repos.tsv`, its sort file and
+`~/.config/goto-repo/history`), so a pick made here ranks in every tool sharing them, and it never
+writes the cache.
+
+Three more of our applications are intended to take it, beside polygit.
 
 ## Dependency checks and their limits
 

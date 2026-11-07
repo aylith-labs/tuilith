@@ -22,6 +22,8 @@
 pub mod background;
 #[cfg(feature = "document-tree")]
 pub mod document_tree;
+#[cfg(feature = "find")]
+pub mod find;
 pub mod float;
 pub mod flow;
 #[cfg(feature = "follow")]

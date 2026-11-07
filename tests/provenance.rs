@@ -26,6 +26,7 @@ fn manifest() -> String {
     not(all(
         feature = "background",
         feature = "document-tree",
+        feature = "find",
         feature = "follow",
         feature = "input",
         feature = "preview"

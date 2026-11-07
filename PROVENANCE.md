@@ -13,6 +13,7 @@ anyone else's code; the Origin column says which of our repositories it was firs
 |---|---|---|---|---|---|
 | `background` | original | polygit | — | 0.1 | Terminal dark/light resolution over four ordered signals, reporting which one answered |
 | `document_tree` | inspired | a private repository of ours | after polygit's settings preview | 0.1 | A JSON document as a tree you can fold, with per-node counts and folds held by path |
+| `find` | original | polygit | — | 0.1 | A finder over folders, repositories or files, drawn at once from a cache and revalidated without moving the row under the pointer |
 | `float` | original | polygit | — | 0.1 | A floating window placed by corner and offset, so a resize cannot lose or corrupt where it was |
 | `flow` | original | a private repository of ours | — | 0.1 | Width-driven layout decisions — flowing rows, key/value stacking, columns, path-aware wrap — so a panel lays out from its own rect |
 | `follow` | original | tuilith | — | 0.1 | Keeps a running application's light/dark mode current from mode-2031 reports, OSC 11 and the desktop |
