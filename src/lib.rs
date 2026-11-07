@@ -20,6 +20,7 @@
 
 #[cfg(feature = "background")]
 pub mod background;
+pub mod colour;
 #[cfg(feature = "document-tree")]
 pub mod document_tree;
 #[cfg(feature = "find")]

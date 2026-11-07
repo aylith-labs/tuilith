@@ -41,7 +41,7 @@ These are structural checks on the declarations and repository files.
 
 ## You compile the components you take
 
-`float`, `flow`, `inspect`, `overlay`, `pick`, `provenance`, `scroll`, `tabs` and `theme` are always available.
+`colour`, `float`, `flow`, `inspect`, `overlay`, `pick`, `provenance`, `scroll`, `tabs` and `theme` are always available.
 Background detection and the JSON document tree are feature-gated because they add dependencies:
 
 ```toml
@@ -79,6 +79,26 @@ It reads goto-repo's files as they are (`~/.cache/goto-repo/repos.tsv`, its sort
 writes the cache.
 
 Three more of our applications are intended to take it, beside polygit.
+
+## The colour picker
+
+`colour` is a picker made of views a host composes over one shared colour, so any combination stays in
+step. A host lists them as data (`colour::Kind` and `colour::Place`, each with a name its config can
+write) or starts from a preset: `inline` (the typed value over a filtered list of the host's named
+colours), `full` (a square field, a value strip, a side panel of hex, old and new, rgb and hsl, and
+editable channel boxes, common and recent swatch rows, and a footer of keys), `sliders` and
+`swatches`. The fields are a square, a wheel, an HSL diamond and a hue-by-lightness grid, drawn with
+the upper half block so each cell holds two colour points; strips run through value, hue, saturation
+or lightness either way; sliders edit RGB, HSL or HSV. A press or drag picks the colour drawn under
+the pointer, a hover holds its hex for the views that print one, and every view walks by keyboard.
+
+Typed text parses `#rgb`, `#rrggbb`, `rgb()`, `hsl()`, the sixteen terminal names or one of the host's
+names, and is refused in place, with what is accepted, when it is none of those. A terminal that
+shows 256 or 16 colours is drawn in what it can show, and the hex printed is the one drawn.
+`colour::Config` holds every other choice (swatch glyph, hex case and short form, text form, colour
+space, common colours, side and strip sizes, tabs between fill views, keys); tuilith keeps no file,
+and the recent colours are the host's to keep (`colour::remember`). A view of the host's own is any
+type implementing `colour::View`; `examples/colour.rs` adds one from outside the crate.
 
 ## Dependency checks and their limits
 

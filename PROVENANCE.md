@@ -12,6 +12,7 @@ anyone else's code; the Origin column says which of our repositories it was firs
 | Component | Kind | Origin | Upstream | Since | What it is |
 |---|---|---|---|---|---|
 | `background` | original | polygit | — | 0.1 | Terminal dark/light resolution over four ordered signals, reporting which one answered |
+| `colour` | inspired | tuilith | after ratatui-color-picker's field, value strip and side panel; tui_color_picker's wheel; iro.js and react-colorful | 0.1 | A colour picker as composable views over one shared colour: typed value, named list, fields, strips, sliders, swatches and a panel |
 | `document_tree` | inspired | a private repository of ours | after polygit's settings preview | 0.1 | A JSON document as a tree you can fold, with per-node counts and folds held by path |
 | `find` | original | polygit | — | 0.1 | A finder over folders, repositories or files, drawn at once from a cache and revalidated without moving the row under the pointer |
 | `float` | original | polygit | — | 0.1 | A floating window placed by corner and offset, so a resize cannot lose or corrupt where it was |
