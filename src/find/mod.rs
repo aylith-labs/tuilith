@@ -10,11 +10,12 @@
 //! # use ratatui::{Frame, layout::Rect};
 //! # use tuilith::{find, theme::Palette};
 //! # fn frame(frame: &mut Frame, area: Rect, palette: &Palette, finder: &mut find::Finder) {
+//! # let (column, row) = (0, 0);
 //! finder.poll(); // takes a finished scan, if one landed
 //! let painted = find::draw(frame, area, finder, palette, "search folders");
-//! // `painted.rows` is what a click hit-tests, and what the pointer row is reported against:
-//! finder.hover(None);
-//! # let _ = painted;
+//! // What a click hit-tests, and what the pointer is reported against. Report `None` only when the
+//! // pointer is over no row: that is what lets a held scan land.
+//! finder.hover(painted.item_at(column, row));
 //! # }
 //! # fn open() -> find::Finder {
 //! let mut config = find::Config::default(); // git repositories, from the goto-repo cache
@@ -35,6 +36,7 @@
 //! [`browse`] is the other way to reach a folder: a picker that moves through the tree one folder at a
 //! time, with breadcrumbs, home, bookmarks and back.
 
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{Receiver, TryRecvError};
 use std::time::{Duration, SystemTime};
@@ -191,7 +193,9 @@ pub struct Finder {
     filter: Filter,
     history: History,
     hovered: Option<usize>,
-    held: Option<Vec<Item>>,
+    /// A scan that landed while the list was in use, and what it would change — counted once when it
+    /// lands, since [`draw`] asks on every frame.
+    held: Option<(Vec<Item>, Pending)>,
     scan: Option<Receiver<Vec<Item>>>,
 }
 
@@ -297,29 +301,25 @@ impl Finder {
             self.held = None;
             self.replace(items);
         } else {
-            self.held = Some(items);
+            let shown: HashSet<&Path> = self.items.iter().map(|item| item.path.as_path()).collect();
+            let landed: HashSet<&Path> = items.iter().map(|item| item.path.as_path()).collect();
+            let pending = Pending {
+                added: landed.difference(&shown).count(),
+                removed: shown.difference(&landed).count(),
+            };
+            self.held = Some((items, pending));
         }
     }
 
     /// What a held scan would change, if one is held.
     #[must_use]
     pub fn pending(&self) -> Option<Pending> {
-        let held = self.held.as_ref()?;
-        let added = held
-            .iter()
-            .filter(|item| !self.items.iter().any(|shown| shown.path == item.path))
-            .count();
-        let removed = self
-            .items
-            .iter()
-            .filter(|shown| !held.iter().any(|item| item.path == shown.path))
-            .count();
-        Some(Pending { added, removed })
+        self.held.as_ref().map(|(_, pending)| *pending)
     }
 
     /// Apply a held scan now.
     pub fn show_pending(&mut self) {
-        if let Some(items) = self.held.take() {
+        if let Some((items, _)) = self.held.take() {
             self.replace(items);
         }
     }
